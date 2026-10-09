@@ -1,0 +1,6 @@
+/target
+dist/
+models/asr4all-s/asr4all.onnx.data
+models/onnxruntime.dll
+models/onnxruntime_providers_shared.dll
+*.pdb

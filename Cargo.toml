@@ -1,0 +1,22 @@
+[package]
+name = "echo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ort = { version = "2.0.0-rc.13", features = ["load-dynamic", "copy-dylibs", "download-binaries"] }
+ndarray = "0.17"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+cpal = "0.15.3"
+hound = "3.5.1"
+crossbeam-channel = "0.5.15"
+windows-sys = { version = "0.59.0", features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_UI_Shell",
+] }
+
