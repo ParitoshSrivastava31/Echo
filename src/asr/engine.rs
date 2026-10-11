@@ -1,24 +1,26 @@
-#[allow(dead_code)]
 pub trait AsrEngine: Send + Sync {
     fn create_session(&self) -> Result<Box<dyn AsrSession>, Box<dyn std::error::Error>>;
     fn name(&self) -> &str;
 }
 
 pub struct AsrPartial {
+    /// Raw CTC transcript (lowercase, no punctuation).
     pub raw_ctc: String,
+    /// Punctuated and capitalised transcript.
     pub formatted: String,
-    #[allow(dead_code)]
-    pub is_final: bool,
 }
 
 pub trait AsrSession: Send {
-    /// Feed an incremental slice of 16kHz mono float audio.
-    /// Returns current partial transcript (provisional tail + stable committed text).
-    fn accept_audio(&mut self, samples: &[f32]) -> Result<AsrPartial, Box<dyn std::error::Error>>;
+    /// Feed 16 kHz mono audio. Inference runs incrementally as soon as enough audio has arrived,
+    /// so `finish` only has to process the tail.
+    fn accept_audio(&mut self, samples: &[f32]) -> Result<(), Box<dyn std::error::Error>>;
 
-    /// Flush the remaining buffered audio and settle final tokens.
+    /// Current provisional transcript (cheap; does not run inference).
+    fn partial_text(&self) -> String;
+
+    /// Flush buffered audio and return the final transcript.
     fn finish(&mut self) -> Result<AsrPartial, Box<dyn std::error::Error>>;
 
-    /// Reset internal state for a new utterance.
+    /// Reset state for a new utterance.
     fn reset(&mut self);
 }

@@ -18,4 +18,8 @@ fn main() {
         let dest_dll = target_dir.join("onnxruntime.dll");
         let _ = fs::copy(&src_dll, &dest_dll);
     }
+
+    if Path::new("echo.rc").exists() {
+        let _ = embed_resource::compile("echo.rc", embed_resource::NONE);
+    }
 }

@@ -50,7 +50,7 @@ pub struct PcecState {
 }
 
 impl PcecState {
-    pub fn new(config: PcecConfig) -> Self {
+    pub fn new(config: PcecConfig, state_size: usize) -> Self {
         Self {
             config,
             ids: Vec::new(),
@@ -62,7 +62,7 @@ impl PcecState {
             open_token: None,
             blanks: 0,
             prev_frame_id: -1,
-            state_cache: vec![0.0f32; 166976],
+            state_cache: vec![0.0f32; state_size],
             seen_cache: 0,
         }
     }

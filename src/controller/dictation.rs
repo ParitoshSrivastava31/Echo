@@ -1,160 +1,167 @@
-use crate::vocabulary::PersonalDictionary;
-use super::commands::{Action, CommandParser};
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
-pub struct DictationController {
-    dictionary: PersonalDictionary,
-    suppress_fillers: bool,
-    committed_text: String,
-    history_stack: Vec<HistoryEntry>,
+use super::commands::{Action, CommandParser};
+use crate::vocabulary::PersonalDictionary;
+
+/// Where the text is going. `key_counter` is the number of physical key presses seen so far;
+/// if it changed since our last insertion the user has typed or moved, so we must not
+/// assume the cursor is still right after our text.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct InsertContext {
+    pub target: isize,
+    pub key_counter: u64,
 }
 
-#[derive(Clone, Debug)]
-#[allow(dead_code)]
-pub struct HistoryEntry {
-    pub inserted: String,
-    pub backspaces_needed: usize,
+impl InsertContext {
+    pub fn current() -> Self {
+        let hwnd = unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow() };
+        Self {
+            target: hwnd as isize,
+            key_counter: crate::hotkey::KEY_COUNTER.load(std::sync::atomic::Ordering::Relaxed),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum ControllerOutput {
-    /// Text to type/inject at cursor
     InsertText(String),
-    /// Delete count characters back, then optionally insert new text
+    /// Delete `backspaces` characters, then type `text`.
     ReplaceText { backspaces: usize, text: String },
-    /// No change needed
     NoOp,
+}
+
+struct Entry {
+    text: String,
+    ctx: InsertContext,
+    at: Instant,
+}
+
+const HISTORY: usize = 20;
+const CONTINUE_WINDOW: Duration = Duration::from_secs(300);
+
+pub struct DictationController {
+    pub dictionary: PersonalDictionary,
+    pub suppress_fillers: bool,
+    history: VecDeque<Entry>,
 }
 
 impl DictationController {
     pub fn new(dictionary: PersonalDictionary, suppress_fillers: bool) -> Self {
-        Self {
-            dictionary,
-            suppress_fillers,
-            committed_text: String::new(),
-            history_stack: Vec::new(),
-        }
+        Self { dictionary, suppress_fillers, history: VecDeque::new() }
     }
 
-    /// Process a new speech hypothesis.
-    /// If `is_final` is true, commits the segment to permanent history.
-    pub fn process_transcript(&mut self, raw_text: &str, is_final: bool) -> ControllerOutput {
+    /// The last insertion, if the cursor is provably still right after it.
+    fn continuing(&self, ctx: &InsertContext) -> Option<&Entry> {
+        self.history
+            .back()
+            .filter(|e| e.ctx == *ctx && e.at.elapsed() < CONTINUE_WINDOW)
+    }
+
+    pub fn process_transcript(&mut self, raw_text: &str, ctx: &InsertContext) -> ControllerOutput {
         if raw_text.trim().is_empty() {
             return ControllerOutput::NoOp;
         }
-
-        // 1. Filter filler words if enabled
-        let cleaned = if self.suppress_fillers {
-            suppress_fillers(raw_text)
-        } else {
-            raw_text.to_string()
-        };
-
-        // 2. Parse commands
-        let action = CommandParser::parse(&cleaned);
-
-        match action {
-            Action::UndoLast => {
-                if let Some(last) = self.history_stack.pop() {
-                    let backspaces = last.inserted.chars().count();
-                    return ControllerOutput::ReplaceText {
-                        backspaces,
-                        text: String::new(),
-                    };
-                }
-                ControllerOutput::NoOp
-            }
-            Action::DeleteSentence => {
-                // Find last sentence in history
-                if let Some(last) = self.history_stack.pop() {
-                    let backspaces = last.inserted.chars().count();
-                    return ControllerOutput::ReplaceText {
-                        backspaces,
-                        text: String::new(),
-                    };
-                }
-                ControllerOutput::NoOp
-            }
-            Action::Insert(text) => {
-                // 3. Apply personal vocabulary
-                let enriched = self.dictionary.apply(&text);
-
-                if is_final {
-                    // Compute text to insert: prepend a space if needed
-                    let to_insert = if !self.committed_text.is_empty()
-                        && !self.committed_text.ends_with('\n')
-                        && !self.committed_text.ends_with(' ')
-                        && !enriched.starts_with('\n')
-                        && !enriched.starts_with('.')
-                        && !enriched.starts_with(',')
-                        && !enriched.starts_with('?')
-                        && !enriched.starts_with('!')
-                    {
-                        format!(" {}", enriched)
-                    } else {
-                        enriched
-                    };
-
-                    self.committed_text.push_str(&to_insert);
-                    self.history_stack.push(HistoryEntry {
-                        inserted: to_insert.clone(),
-                        backspaces_needed: to_insert.chars().count(),
-                    });
-
-                    ControllerOutput::InsertText(to_insert)
-                } else {
-                    // During streaming partial updates, conservative preview
-                    ControllerOutput::NoOp
+        match CommandParser::parse_with(raw_text, self.suppress_fillers) {
+            Action::UndoLast => match self.undo(ctx) {
+                Some(n) => ControllerOutput::ReplaceText { backspaces: n, text: String::new() },
+                None => ControllerOutput::NoOp,
+            },
+            Action::UndoAndInsert(text) => {
+                let backspaces = self.undo(ctx).unwrap_or(0);
+                match self.insert(&text, ctx) {
+                    Some(text) => ControllerOutput::ReplaceText { backspaces, text },
+                    None if backspaces > 0 => ControllerOutput::ReplaceText { backspaces, text: String::new() },
+                    None => ControllerOutput::NoOp,
                 }
             }
+            Action::Insert(text) => match self.insert(&text, ctx) {
+                Some(t) => ControllerOutput::InsertText(t),
+                None => ControllerOutput::NoOp,
+            },
         }
     }
 
-    pub fn reset_session(&mut self) {
-        self.committed_text.clear();
-        self.history_stack.clear();
+    fn undo(&mut self, ctx: &InsertContext) -> Option<usize> {
+        self.continuing(ctx)?;
+        self.history.pop_back().map(|e| e.text.chars().count())
     }
-}
 
-fn suppress_fillers(text: &str) -> String {
-    let fillers = [" um ", " uh ", " er ", " ah "];
-    let mut s = format!(" {} ", text);
-    for &f in &fillers {
-        while let Some(pos) = s.to_lowercase().find(f) {
-            s.replace_range(pos..pos + f.len() - 1, " ");
+    fn insert(&mut self, text: &str, ctx: &InsertContext) -> Option<String> {
+        let text = self.dictionary.apply(text);
+        if text.trim().is_empty() {
+            return None;
         }
+        let needs_space = self.continuing(ctx).is_some_and(|e| !e.text.ends_with(['\n', ' ']))
+            && !text.starts_with(|c: char| c.is_whitespace() || ".,?!:;)".contains(c));
+        let out = if needs_space { format!(" {text}") } else { text };
+        self.history.push_back(Entry { text: out.clone(), ctx: *ctx, at: Instant::now() });
+        if self.history.len() > HISTORY {
+            self.history.pop_front();
+        }
+        Some(out)
     }
-    s.trim().to_string()
+
+    /// Call when an insertion could not be typed (e.g. copied to clipboard instead).
+    pub fn forget_last(&mut self) {
+        self.history.pop_back();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const CTX: InsertContext = InsertContext { target: 1, key_counter: 0 };
+
     #[test]
     fn test_dictation_flow_with_vocab_and_history() {
-        let dict = PersonalDictionary::default();
-        let mut controller = DictationController::new(dict, true);
-
-        let out1 = controller.process_transcript("I write typescript code", true);
+        let mut c = DictationController::new(PersonalDictionary::default(), true);
         assert_eq!(
-            out1,
-            ControllerOutput::InsertText("I write TypeScript code".to_string())
+            c.process_transcript("I write typescript code", &CTX),
+            ControllerOutput::InsertText("I write TypeScript code".into())
         );
-
-        let out2 = controller.process_transcript("with postgres", true);
         assert_eq!(
-            out2,
-            ControllerOutput::InsertText(" with PostgreSQL".to_string())
+            c.process_transcript("with postgres", &CTX),
+            ControllerOutput::InsertText(" with PostgreSQL".into())
         );
+        assert_eq!(
+            c.process_transcript("scratch that", &CTX),
+            ControllerOutput::ReplaceText { backspaces: " with PostgreSQL".chars().count(), text: String::new() }
+        );
+    }
 
-        // Undo
-        let out3 = controller.process_transcript("scratch that", true);
-        match out3 {
-            ControllerOutput::ReplaceText { backspaces, text } => {
-                assert_eq!(backspaces, " with PostgreSQL".chars().count());
-                assert_eq!(text, "");
-            }
-            _ => panic!("Expected ReplaceText"),
-        }
+    #[test]
+    fn test_no_space_or_undo_after_user_typed() {
+        let mut c = DictationController::new(PersonalDictionary::default(), true);
+        c.process_transcript("Hello there.", &CTX);
+        let moved = InsertContext { key_counter: 3, ..CTX };
+        assert_eq!(c.process_transcript("Next message.", &moved), ControllerOutput::InsertText("Next message.".into()));
+        let moved_again = InsertContext { key_counter: 9, ..CTX };
+        assert_eq!(c.process_transcript("scratch that", &moved_again), ControllerOutput::NoOp);
+    }
+
+    #[test]
+    fn test_other_window_gets_no_leading_space() {
+        let mut c = DictationController::new(PersonalDictionary::default(), true);
+        c.process_transcript("First.", &CTX);
+        let other = InsertContext { target: 2, ..CTX };
+        assert_eq!(c.process_transcript("Second.", &other), ControllerOutput::InsertText("Second.".into()));
+    }
+
+    #[test]
+    fn test_scratch_that_replace() {
+        let mut c = DictationController::new(PersonalDictionary::default(), true);
+        c.process_transcript("Send it Monday.", &CTX);
+        assert_eq!(
+            c.process_transcript("Scratch that, send it Friday.", &CTX),
+            ControllerOutput::ReplaceText { backspaces: 15, text: "Send it Friday.".into() }
+        );
+    }
+
+    #[test]
+    fn test_filler_only_is_noop() {
+        let mut c = DictationController::new(PersonalDictionary::default(), true);
+        assert_eq!(c.process_transcript("Um.", &CTX), ControllerOutput::NoOp);
     }
 }

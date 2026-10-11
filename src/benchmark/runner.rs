@@ -24,7 +24,11 @@ impl BenchmarkRunner {
         wav_path: P,
         reference_text: &str,
     ) -> Result<BenchmarkResult, Box<dyn std::error::Error>> {
-        let engine = Asr4AllEngine::new("models/asr4all-s")?;
+        let _ = crate::asr::init_runtime(2);
+
+        let model_dir = crate::paths::find_resource("models/asr4all-s")
+            .unwrap_or_else(|| std::path::PathBuf::from("models/asr4all-s"));
+        let engine = Asr4AllEngine::new(&model_dir)?;
         let mut session = engine.create_session()?;
 
         let mut reader = hound::WavReader::open(wav_path)?;
@@ -50,9 +54,11 @@ impl BenchmarkRunner {
         let asr_final = session.finish()?;
         let elapsed = start_time.elapsed();
 
-        let final_out = controller.process_transcript(&asr_final.formatted, true);
+        let ctx = crate::controller::InsertContext::default();
+        let final_out = controller.process_transcript(&asr_final.formatted, &ctx);
         let final_text = match final_out {
             ControllerOutput::InsertText(t) => t.trim().to_string(),
+            ControllerOutput::ReplaceText { text, .. } => text.trim().to_string(),
             _ => asr_final.formatted.trim().to_string(),
         };
 

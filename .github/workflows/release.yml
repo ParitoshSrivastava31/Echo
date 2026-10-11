@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build & Package Windows Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Download Pretrained Speech Models & ONNX Runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "models\asr4all-s"
+          
+          # Download ONNX Runtime 1.20+ DLL
+          $ortZipUrl = "https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-win-x64-1.20.1.zip"
+          Invoke-WebRequest -Uri $ortZipUrl -OutFile "ort.zip"
+          Expand-Archive -Path "ort.zip" -DestinationPath "ort_extract" -Force
+          Copy-Item "ort_extract\onnxruntime-win-x64-1.20.1\lib\onnxruntime.dll" "models\onnxruntime.dll"
+          
+          # Download FUTO asr4all-s model weights from HuggingFace
+          $hfBase = "https://huggingface.co/futo-org/asr4all-s/resolve/main"
+          $files = @(
+            "asr4all.onnx.data",
+            "pcec_c16.onnx",
+            "pcec_c16_flush.onnx",
+            "stream_c16r4.onnx",
+            "metadata.json",
+            "LICENSE"
+          )
+          foreach ($file in $files) {
+            Write-Host "Fetching $file..."
+            Invoke-WebRequest -Uri "$hfBase/$file" -OutFile "models\asr4all-s\$file"
+          }
+
+      - name: Generate Icon Asset
+        run: cargo run -- write-ico
+
+      - name: Run Test Suite
+        run: cargo test --release
+
+      - name: Build Optimized Release Binary
+        run: cargo build --release
+
+      - name: Compile Inno Setup Installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts\installer.iss
+
+      - name: Create Portable Zip Package
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF -replace "refs/tags/", "" } else { "v0.2.0" }
+          $zipName = "dist\Echo-$tag-windows-x64.zip"
+          Compress-Archive -Path target\release\echo.exe, models\onnxruntime.dll, echo.ico, models -DestinationPath $zipName -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/*.exe
+            dist/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

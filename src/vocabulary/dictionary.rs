@@ -1,71 +1,64 @@
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
+/// Local "spoken phrase -> written form" replacements, stored as JSON the user can edit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonalDictionary {
-    pub words: HashMap<String, String>,
+    pub words: BTreeMap<String, String>,
 }
 
 impl Default for PersonalDictionary {
     fn default() -> Self {
-        let mut words = HashMap::new();
-        // Common technical terms, programming languages, and acronyms
         let defaults = [
             ("typescript", "TypeScript"),
             ("javascript", "JavaScript"),
-            ("rust", "Rust"),
-            ("python", "Python"),
             ("postgresql", "PostgreSQL"),
             ("postgres", "PostgreSQL"),
             ("next js", "Next.js"),
             ("nextjs", "Next.js"),
+            ("node js", "Node.js"),
             ("langgraph", "LangGraph"),
             ("lang graph", "LangGraph"),
+            ("lang chain", "LangChain"),
+            ("langchain", "LangChain"),
+            ("vercel", "Vercel"),
             ("vscode", "VS Code"),
             ("vs code", "VS Code"),
             ("github", "GitHub"),
             ("git hub", "GitHub"),
-            ("docker", "Docker"),
-            ("antigravity", "Antigravity"),
             ("api", "API"),
             ("apis", "APIs"),
             ("json", "JSON"),
             ("html", "HTML"),
             ("css", "CSS"),
             ("sql", "SQL"),
-            ("nosql", "NoSQL"),
-            ("linux", "Linux"),
-            ("windows", "Windows"),
             ("graphql", "GraphQL"),
             ("kubernetes", "Kubernetes"),
-            ("k8s", "K8s"),
             ("aws", "AWS"),
             ("gcp", "GCP"),
-            ("gemini", "Gemini"),
             ("openai", "OpenAI"),
+            ("chatgpt", "ChatGPT"),
+            ("chat gpt", "ChatGPT"),
             ("llm", "LLM"),
             ("llms", "LLMs"),
-            ("asr", "ASR"),
             ("onnx", "ONNX"),
+            ("ui", "UI"),
+            ("url", "URL"),
         ];
-
-        for (k, v) in defaults {
-            words.insert(k.to_string(), v.to_string());
-        }
-
-        Self { words }
+        Self { words: defaults.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect() }
     }
 }
 
-#[allow(dead_code)]
 impl PersonalDictionary {
     pub fn load_or_default<P: AsRef<Path>>(path: P) -> Self {
         if let Ok(data) = fs::read_to_string(&path) {
             if let Ok(dict) = serde_json::from_str::<PersonalDictionary>(&data) {
                 return dict;
             }
+            // Never overwrite a file the user hand-edited into invalid JSON.
+            return Self::default();
         }
         let dict = Self::default();
         let _ = dict.save(path);
@@ -76,71 +69,54 @@ impl PersonalDictionary {
         if let Some(parent) = path.as_ref().parent() {
             fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_string_pretty(self)?;
-        fs::write(path, json)?;
+        fs::write(path, serde_json::to_string_pretty(self)?)?;
         Ok(())
     }
 
     pub fn add(&mut self, spoken: &str, replacement: &str) {
-        self.words.insert(spoken.to_lowercase().trim().to_string(), replacement.trim().to_string());
+        self.words.insert(spoken.trim().to_lowercase(), replacement.trim().to_string());
     }
 
     pub fn remove(&mut self, spoken: &str) {
-        self.words.remove(&spoken.to_lowercase().trim().to_string());
+        self.words.remove(&spoken.trim().to_lowercase());
     }
 
-    /// Apply dictionary replacements respecting word boundaries.
+    /// Whole-word, case-insensitive replacement. Longer phrases win ("next js" before "js").
     pub fn apply(&self, text: &str) -> String {
+        let mut entries: Vec<(&String, &String)> = self.words.iter().filter(|(k, _)| !k.is_empty()).collect();
+        entries.sort_by_key(|(k, _)| std::cmp::Reverse(k.len()));
         let mut result = text.to_string();
-        for (pattern, replacement) in &self.words {
-            // Case-insensitive boundary match
-            result = replace_word_boundary(&result, pattern, replacement);
+        for (pattern, replacement) in entries {
+            result = replace_word(&result, pattern, replacement);
         }
         result
     }
 }
 
-fn replace_word_boundary(text: &str, target: &str, replacement: &str) -> String {
-    let lower_text = text.to_lowercase();
-    let lower_target = target.to_lowercase();
-
-    let mut result = String::new();
-    let mut last_idx = 0;
-
-    let target_len = lower_target.len();
-
-    while let Some(found) = lower_text[last_idx..].find(&lower_target) {
-        let start = last_idx + found;
-        let end = start + target_len;
-
-        // Check left boundary: start == 0 or char before is non-alphanumeric
-        let left_ok = if start == 0 {
-            true
-        } else {
-            let prev_char = text[..start].chars().last().unwrap();
-            !prev_char.is_alphanumeric()
-        };
-
-        // Check right boundary: end == text.len() or char after is non-alphanumeric
-        let right_ok = if end >= text.len() {
-            true
-        } else {
-            let next_char = text[end..].chars().next().unwrap();
-            !next_char.is_alphanumeric()
-        };
-
+/// ASCII case folding keeps byte offsets identical to the original string,
+/// so slicing stays on valid UTF-8 boundaries even with non-ASCII text.
+fn replace_word(text: &str, target: &str, replacement: &str) -> String {
+    let hay = text.to_ascii_lowercase();
+    let needle = target.to_ascii_lowercase();
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    let mut from = 0;
+    while let Some(found) = hay[from..].find(&needle) {
+        let start = from + found;
+        let end = start + needle.len();
+        let left_ok = text[..start].chars().next_back().is_none_or(|c| !c.is_alphanumeric());
+        let right_ok = text[end..].chars().next().is_none_or(|c| !c.is_alphanumeric());
         if left_ok && right_ok {
-            result.push_str(&text[last_idx..start]);
-            result.push_str(replacement);
-            last_idx = end;
+            out.push_str(&text[last..start]);
+            out.push_str(replacement);
+            last = end;
+            from = end;
         } else {
-            result.push_str(&text[last_idx..start + 1]);
-            last_idx = start + 1;
+            from = start + text[start..].chars().next().map_or(1, char::len_utf8);
         }
     }
-
-    result.push_str(&text[last_idx..]);
-    result
+    out.push_str(&text[last..]);
+    out
 }
 
 #[cfg(test)]
@@ -150,10 +126,8 @@ mod tests {
     #[test]
     fn test_dictionary_replacement() {
         let dict = PersonalDictionary::default();
-        let input = "I love writing typescript with postgres and next js for our api";
-        let output = dict.apply(input);
         assert_eq!(
-            output,
+            dict.apply("I love writing typescript with postgres and next js for our api"),
             "I love writing TypeScript with PostgreSQL and Next.js for our API"
         );
     }
@@ -161,9 +135,13 @@ mod tests {
     #[test]
     fn test_no_substring_accidental_replace() {
         let dict = PersonalDictionary::default();
-        let input = "The rapid development environment";
-        let output = dict.apply(input);
-        // "api" should not match inside "rapid"
-        assert_eq!(output, "The rapid development environment");
+        assert_eq!(dict.apply("The rapid development environment"), "The rapid development environment");
+    }
+
+    #[test]
+    fn test_unicode_neighbours() {
+        let dict = PersonalDictionary::default();
+        assert_eq!(dict.apply("naïve api café"), "naïve API café");
+        assert_eq!(dict.apply("éapi"), "éapi");
     }
 }

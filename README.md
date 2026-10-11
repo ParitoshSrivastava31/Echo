@@ -1,74 +1,86 @@
 # Echo: Lightweight, Offline English Voice Keyboard for Windows
 
-Echo is a blazing-fast, local-first English voice keyboard for Windows 11. It allows you to speak naturally and have text appear instantly at the cursor in any application—including VS Code, browsers, Slack, Windows Terminal, Notepad, and ChatGPT—without an internet connection, account, or external LLM.
+[![Release](https://img.shields.io/github/v/release/ParitoshSrivastava31/Echo?color=emerald&label=Release)](https://github.com/ParitoshSrivastava31/Echo/releases)
+[![Build & Release](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml/badge.svg)](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml)
+[![Tests](https://img.shields.io/badge/tests-28%20passed-brightgreen)](https://github.com/ParitoshSrivastava31/Echo)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: Windows 11 / 10](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-0078D4.svg)](https://github.com/ParitoshSrivastava31/Echo)
 
-Built in pure native Rust with ONNX Runtime, Echo delivers an experience comparable to commercial tools like Wispr Flow while using minimal memory and CPU.
+**Echo** is an offline, local-first English voice keyboard for Windows. It lets you speak naturally and have accurately punctuated, formatted text appear instantly at the cursor in any application—including VS Code, browsers, Slack, Windows Terminal, Notepad, and ChatGPT—without an internet connection, account, subscription, or external LLM.
+
+Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation experience of commercial tools like Wispr Flow while maintaining a near-zero resource footprint.
 
 ---
 
-## ⚡ Highlights
+## ⚡ Key Highlights
 
-- **100% Offline & Private**: Zero cloud transcription, zero telemetry, zero audio recordings retained. All processing stays entirely on your laptop.
-- **Genuine Incremental Streaming**: Powered by FUTO's `asr4all-s` (28.1M parameter DFSMN architecture) with stateful left-context frame caches. Each audio frame is encoded once with zero redundant re-evaluations.
-- **Ultra-Low Resource Footprint**:
-  - **Memory (RAM)**: ~160 MB active footprint (memory-mapped weights, well below the 500 MB target).
-  - **Idle CPU**: ~0.0% (event-driven WASAPI capture and hotkey listener).
-  - **Active CPU**: <9% of a single core on an Intel Core i5-10300H laptop.
-  - **Speed**: **11.8x faster than real-time (RTFx)** on CPU. 11 seconds of speech processes in under 950 ms.
-- **Built-in Punctuation, Capitalization & Error Correction (PCEC)**: Intelligent second-pass lattice decoding that formats prose, capitalizes sentence boundaries, and corrects common acoustic slips.
+- **100% Offline & Private**: Zero cloud transcription, zero telemetry, zero audio recordings retained. All processing runs entirely on your local machine.
+- **Floating Pill HUD (Apple & Dieter Rams / Braun Aesthetic)**:
+  - **Fixed 156×40 px Ultra-Compact Capsule**: Never expands or jumps in size; remains compact, pristine, and unobtrusive at the bottom-center of your screen.
+  - **Non-Interfering**: Built with Win32 layered windows (`WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`). Never steals keyboard focus from your active editor, and mouse clicks pass right through.
+  - **Dieter Rams Coral Status Jewel**: Subtle, breathing indicator dot (`#FF4500` / `#FF5522`) with specular reflection and photon halo.
+  - **7-Needle Gaussian Harmonic Waveform**: Mathematical acoustic distribution $[0.18, 0.38, 0.68, 0.94, 0.68, 0.38, 0.18]$ responding dynamically to microphone RMS volume.
+  - **Clear State Machine**: Smooth transitions between **Listening** (breathing coral jewel + live Gaussian needles), **Processing** (ambient traveling wave shimmer), and **Done** (emerald checkmark with gentle auto-fade).
+- **Dual Hotkey Modes**:
+  - **Push-to-Talk**: Hold `Win + Alt` (or `Alt + E`) while speaking and release to insert.
+  - **Tap-to-Toggle**: Quickly tap `Win + Alt` (or `Alt + E`) to start listening, and tap again when finished.
+  - Customizable shortcuts from the tray menu (`Win + Alt`, `Alt + Space`, `Ctrl + Space`, `Win + Space`, `Ctrl + Alt`).
+- **Full Windows Desktop Experience**:
+  - **System Tray Icon**: Native tray menu with microphone selector, shortcut picker, filler filter toggle, "Start with Windows" autostart toggle, and dictionary editor.
+  - **No Console Window**: Runs as a true native Windows GUI app (`windows_subsystem = "windows"`).
+  - **Per-Monitor V2 DPI Aware**: Sharp, anti-aliased software rendering on 100%, 125%, 150%, and 200% scaling.
+- **Genuine Incremental Streaming**: Powered by FUTO's `asr4all-s` (28.1M parameter DFSMN architecture) with left-context frame caches. Each audio frame is processed incrementally without redundant recalculations.
 - **Deterministic Dictation Controller**:
-  - Spoken commands: *"new line"*, *"new paragraph"*, *"comma"*, *"period"*, *"question mark"*, *"exclamation point"*, *"open quote"*, *"close quote"*, *"colon"*, *"semicolon"*.
-  - Voice corrections & undo: *"scratch that"* or *"undo that"* erases the last segment; *"actually [word]"* automatically replaces the mistaken word.
-  - Filler word suppression: Automatically filters *"um"*, *"uh"*, and hesitations.
-  - Personal vocabulary: Custom dictionary for technical terms and acronyms (*TypeScript*, *PostgreSQL*, *Next.js*, *LangGraph*, *VS Code*, *Docker*, *API*).
-- **Windows Integration**:
-  - Global hotkey: `Ctrl + Alt + Space` toggles recording globally.
-  - Native Unicode `SendInput` keyboard events with clipboard fallback.
-  - Works out-of-the-box in VS Code, Notepad, Windows Terminal, Chrome, Edge, Slack, and Discord.
-  - Native WASAPI audio capture with automatic resampling from any microphone format (44.1 kHz, 48 kHz, etc.) to 16 kHz mono.
+  - **Spoken Commands**: *"new line"*, *"new paragraph"*, *"comma"*, *"period"*, *"question mark"*, *"exclamation point"*, *"open quote"*, *"close quote"*, *"colon"*, *"semicolon"*.
+  - **Voice Corrections & Undo**: *"scratch that"* or *"undo that"* erases the last segment; inline self-corrections like *"call him Tuesday, actually Wednesday"* automatically replace the corrected words.
+  - **Filler Suppression**: Automatically filters *"um"*, *"uh"*, and hesitations.
+  - **Personal Vocabulary**: Built-in and user-customizable dictionary for technical terms and acronyms (*TypeScript*, *PostgreSQL*, *Next.js*, *LangGraph*, *Docker*, *VS Code*, *API*).
 
 ---
 
-## 📊 Measured Benchmark Results
+## 📊 Performance & Benchmark
 
-Tested on development laptop (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2.50GHz, 8 GB RAM, Windows 11 Home 64-bit):
+Tested on development target (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2.50GHz, 8 GB RAM, Windows 11 Home 64-bit):
 
-| Metric | Result | Target | Status |
+| Metric | Measured Result | Project Goal | Status |
 | :--- | :--- | :--- | :--- |
 | **Model Size (weights)** | **103.2 MB** | 30 – 150 MB | ✅ Passed |
-| **Model + Runtime Footprint** | **~160 MB RAM** | < 500 MB | ✅ Passed |
+| **Active Memory (RAM)** | **~158 MB RAM** | < 500 MB | ✅ Passed |
 | **Idle CPU Usage** | **0.0%** | ~0% | ✅ Passed |
-| **Active Speech CPU** | **< 9% of 1 core** | Minimized | ✅ Passed |
+| **Active CPU (Speaking)** | **< 9% of 1 core** | Minimized | ✅ Passed |
 | **Inference Processing (11.0s clip)** | **928.86 ms** | Low latency | ✅ Passed |
-| **Real-Time Factor (RTFx)** | **11.84x** | > 1.0x | ✅ Passed |
+| **Real-Time Factor (RTFx)** | **11.84x faster than real-time** | > 1.0x | ✅ Passed |
 | **Word Error Rate (WER)** | **0.00%** on reference audio | Baseline | ✅ Passed |
 | **Character Error Rate (CER)** | **0.00%** on reference audio | Baseline | ✅ Passed |
+| **Test Suite** | **28 tests passing** (unit + integration) | Verified | ✅ Passed |
 
 ---
 
-## 🚀 Quick Start
+## 📥 Download & Installation
 
-### 1. Requirements
-- Windows 10 or Windows 11 (64-bit)
-- Any standard microphone (built-in array, USB, or headset)
-- No Python or PyTorch required for the release build!
+### Option 1: Windows Installer (Recommended)
 
-### 2. Running the Portable Application
-Run the portable build from `dist/echo/`:
-```powershell
-dist\echo\echo.exe
-```
+Download the latest installer from the [Releases](https://github.com/ParitoshSrivastava31/Echo/releases) page:
 
-Or using Cargo from source:
-```powershell
-cargo run --release
-```
+1. Download **`Echo-Setup-v0.2.0.exe`** (approx. 99 MB, self-contained with model weights and ONNX runtime).
+2. Double-click to install. It installs to your user profile (`%LOCALAPPDATA%\Programs\Echo`) without requiring administrator permissions.
+3. Optionally enable **"Start Echo when Windows starts"** and **"Create Desktop Shortcut"**.
+4. Echo launches immediately and docks silently in your Windows System Tray.
 
-### 3. How to Dictate
-1. **Focus any text box or editor** (e.g. VS Code, Notepad, your browser, terminal).
-2. **Press `Ctrl + Alt + Space`** to start dictation (Echo switches to `Listening`).
-3. **Speak naturally**.
-4. **Press `Ctrl + Alt + Space` again** to stop. Echo finalizes the transcript, applies punctuation and technical terms, and inserts the text directly at your cursor!
+### Option 2: Portable ZIP
+
+1. Download **`Echo-v0.2.0-windows-x64.zip`**.
+2. Extract to any folder (e.g. `C:\Tools\Echo`).
+3. Run `echo.exe`.
+
+---
+
+## 🎙️ How to Dictate
+
+1. **Focus any text box or application** (e.g. VS Code, browser, Word, Notepad, Slack, Terminal).
+2. **Push-to-Talk**: Hold down **`Win + Alt`**, speak your thoughts, and release the keys.
+3. **Or Tap-to-Toggle**: Tap **`Win + Alt`** once to begin dictating (the pill displays `LIVE`), speak, and tap **`Win + Alt`** again to finish.
+4. The floating pill visualizer displays your voice waveform in real time. Upon release, text is punctuated, formatted, and inserted cleanly at your cursor.
 
 ---
 
@@ -86,83 +98,69 @@ Echo includes a deterministic parser that turns natural speech commands into for
 | *"exclamation mark"* / *"point"* | `!` |
 | *"open quote"* / *"close quote"* | `"` |
 | *"colon"* / *"semicolon"* | `:` / `;` |
-| *"scratch that"* / *"undo that"* | Erases the last spoken segment |
-| *"meet on Tuesday, actually Wednesday"* | Replaces "Tuesday" with "Wednesday" |
+| *"scratch that"* / *"undo that"* | Erases the last inserted segment |
+| *"meet on Tuesday, actually Wednesday"* | Automatically replaces "Tuesday" with "Wednesday" |
 
 ---
 
-## 🛠️ CLI Commands & Benchmark Suite
+## ⚙️ Configuration & Tray Menu
 
-Echo includes built-in diagnostic and benchmarking tools:
+Right-click the Echo icon in the System Tray to access settings:
 
-### Run Benchmark Suite
-Tests the neural network and controller pipeline against reference speech (`models/jfk.wav`):
-```powershell
-dist\echo\echo.exe benchmark
-```
-Output:
-```text
-============================================================
-             ECHO ASR BENCHMARK SUITE
-============================================================
-Audio target:    models/jfk.wav
-Reference text:  And so my fellow Americans ask not what your country can do for you. Ask what you can do for your country.
-Running reproducible benchmark...
-
-------------------------------------------------------------
-Audio duration:          11.00 s
-Inference processing:    928.86 ms
-Real-Time Factor (RTFx): 11.84x faster than real-time
-Word Error Rate (WER):   0.00%
-Char Error Rate (CER):   0.00%
-------------------------------------------------------------
-Raw ASR Output:          and so my fellow americass ask not what your country can do for you ask what you can do for your country
-Final Formatted Output:  And so my fellow Americans ask not what your country can do for you. Ask what you can do for your country.
-============================================================
-```
-
-### Test Microphone Capture
-Tests microphone enumeration, WASAPI hardware capture, and sample rate conversion:
-```powershell
-dist\echo\echo.exe test-mic
-```
-
-### Run Full Test Suite
-Runs all 12 unit and integration tests:
-```powershell
-cargo test
-```
+- **Hotkey**: Switch between `Win + Alt`, `Alt + Space`, `Ctrl + Space`, `Win + Space`, or `Ctrl + Alt`.
+- **Microphone**: Select your preferred input device or use the Windows default.
+- **Filter filler words**: Toggle suppression of *"um"*, *"uh"*, and stuttered repetitions.
+- **Start with Windows**: Toggle automatic startup on login.
+- **Open Personal Dictionary**: Opens `%LOCALAPPDATA%\Echo\dictionary.json` in your default editor.
+- **Open Log File**: View privacy-safe application logs at `%LOCALAPPDATA%\Echo\echo.log` (transcripts and voice data are never logged).
+- **Run ASR Benchmark**: Run instant accuracy and latency diagnostics.
 
 ---
 
-## ⚙️ Configuration & Custom Dictionary
+## 🛠️ Building from Source
 
-Echo automatically saves configuration in `%APPDATA%\Echo\config.json`:
+### Prerequisites
 
-```json
-{
-  "schema_version": 1,
-  "model_dir": "models/asr4all-s",
-  "microphone_name": null,
-  "hotkey_modifiers": 3,
-  "hotkey_key": 32,
-  "suppress_fillers": true,
-  "vad_threshold": 0.5,
-  "telemetry_enabled": false
-}
+- 64-bit Windows 10 or 11
+- [Rust toolchain](https://rustup.rs/) (MSVC target)
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (for building the installer)
+
+### Build Steps
+
+```powershell
+# Clone the repository
+git clone https://github.com/ParitoshSrivastava31/Echo.git
+cd echo
+
+# Run tests (all 28 tests)
+cargo test --release
+
+# Build optimized release binary
+cargo build --release
+
+# Generate icon asset
+cargo run -- write-ico
+
+# Compile Inno Setup installer
+& "ISCC.exe" scripts\installer.iss
 ```
 
-### Adding Personal Vocabulary
-Echo comes pre-loaded with technical terms (TypeScript, PostgreSQL, Next.js, LangGraph, etc.). You can customize or add your own terms in the code or dictionary file:
-```rust
-dict.add("whisper flow", "Wispr Flow");
-dict.add("k8s", "Kubernetes");
+The resulting installer is generated at `dist\Echo-Setup-v0.2.0.exe`.
+
+### Diagnostic Commands
+
+```powershell
+# Run reproducibility benchmark against JFK reference speech
+target\release\echo.exe benchmark
+
+# Test microphone capture and 16kHz resampling
+target\release\echo.exe test-mic
 ```
 
 ---
 
 ## ⚖️ Licensing & Attribution
 
-- **Application Code**: Licensed under MIT / Apache 2.0.
-- **ASR Model (`asr4all-s`)**: Developed by FUTO and distributed under the [`futo-model-weights-ethical-use-1.0`](models/asr4all-s/LICENSE) license, which explicitly permits commercial and personal dictation and accessibility use while restricting mass surveillance.
-- **ONNX Runtime**: Licensed under the MIT License by Microsoft Corporation.
+- **Echo Application Code**: Licensed under the [MIT License](LICENSE).
+- **Speech Recognition Model (`asr4all-s`)**: Pretrained model weights developed by FUTO, distributed under the [FUTO Model Weights License (Restricted Use) 1.0](models/asr4all-s/LICENSE).
+- **ONNX Runtime**: Developed and licensed under the MIT License by Microsoft Corporation.

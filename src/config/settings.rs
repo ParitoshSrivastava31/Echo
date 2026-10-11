@@ -1,38 +1,44 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+fn default_hotkey_combo() -> String {
+    "Win+Alt".to_string()
+}
+
+fn default_inference_threads() -> usize {
+    2
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub schema_version: u32,
-    pub model_dir: String,
+    #[serde(default = "default_hotkey_combo", alias = "hotkey")]
+    pub hotkey_combo: String, // "Win+Alt", "Alt+Space", "Ctrl+Space", etc.
     pub microphone_name: Option<String>,
-    pub hotkey_modifiers: u32, // e.g. MOD_CONTROL | MOD_ALT = 0x0002 | 0x0001 = 3
-    pub hotkey_key: u32,       // e.g. VK_SPACE = 0x20
     pub suppress_fillers: bool,
-    pub vad_threshold: f32,
-    pub telemetry_enabled: bool,
+    #[serde(default = "default_inference_threads")]
+    pub inference_threads: usize,
+    #[serde(default)]
+    pub autostart: bool,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             schema_version: 1,
-            model_dir: "models/asr4all-s".to_string(),
+            hotkey_combo: "Win+Alt".to_string(),
             microphone_name: None,
-            hotkey_modifiers: 0x0002 | 0x0001, // Ctrl + Alt
-            hotkey_key: 0x20,                  // Space
             suppress_fillers: true,
-            vad_threshold: 0.5,
-            telemetry_enabled: false,
+            inference_threads: 2,
+            autostart: false,
         }
     }
 }
 
 impl AppConfig {
     pub fn default_config_path() -> PathBuf {
-        let appdata = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
-        Path::new(&appdata).join("Echo").join("config.json")
+        crate::paths::config_dir().join("config.json")
     }
 
     pub fn load_or_default() -> Self {
@@ -41,6 +47,9 @@ impl AppConfig {
             if let Ok(config) = serde_json::from_str::<AppConfig>(&content) {
                 return config;
             }
+            // If corrupt, backup original file before resetting
+            let backup_path = path.with_extension("json.bak");
+            let _ = fs::rename(&path, backup_path);
         }
         let config = Self::default();
         let _ = config.save();
