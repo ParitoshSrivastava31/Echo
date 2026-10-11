@@ -244,7 +244,7 @@ unsafe extern "system" fn pill_wnd_proc(
                     DictationState::Listening | DictationState::Processing | DictationState::Done | DictationState::Error => {
                         if !inner.visible {
                             inner.visible = true;
-                            reposition_pill(hwnd, inner.dpi_scale);
+                            reposition_pill(hwnd, inner.dpi_scale, (120.0 * inner.dpi_scale) as i32);
                             ShowWindow(hwnd, SW_SHOWNOACTIVATE);
                         }
                     }
@@ -266,9 +266,9 @@ unsafe extern "system" fn pill_wnd_proc(
                     // Smooth volume dampening
                     inner.smooth_level += (inner.audio_level - inner.smooth_level) * 0.35;
 
-                    // Auto-hide if in Done state after 650ms
+                    // Auto-hide if in Done state after 1200ms
                     if inner.state == DictationState::Done
-                        && inner.state_change_time.elapsed().as_millis() > 650
+                        && inner.state_change_time.elapsed().as_millis() > 1200
                     {
                         inner.visible = false;
                         inner.state = DictationState::Idle;
@@ -299,8 +299,8 @@ unsafe extern "system" fn pill_wnd_proc(
     }
 }
 
-/// Positions the pill at the bottom center of the active monitor, 56px above taskbar
-unsafe fn reposition_pill(hwnd: HWND, scale: f32) {
+/// Positions the pill at the bottom center of the active monitor, 48px above taskbar
+unsafe fn reposition_pill(hwnd: HWND, scale: f32, pill_w: i32) {
     let mut pt: POINT = std::mem::zeroed();
     windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut pt);
 
@@ -313,7 +313,6 @@ unsafe fn reposition_pill(hwnd: HWND, scale: f32) {
         let mon_width = work.right - work.left;
         let mon_bottom = work.bottom;
 
-        let pill_w = (120.0 * scale) as i32;
         let pill_h = (36.0 * scale) as i32;
 
         let x = work.left + (mon_width - pill_w) / 2;
@@ -334,8 +333,18 @@ unsafe fn reposition_pill(hwnd: HWND, scale: f32) {
 /// Renders the liquid glass pill with audio visualizer waveform and crisp typography
 unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
     let scale = inner.dpi_scale;
-    let base_w = 120.0 * scale;
+    // Smoothly shrink width from 120px to 58px when transitioning to Done/Injected state
+    let base_w = if inner.state == DictationState::Done {
+        let elapsed = inner.state_change_time.elapsed().as_secs_f32();
+        let progress = (elapsed / 0.35).clamp(0.0, 1.0);
+        let ease = 1.0 - (1.0 - progress).powi(3); // cubic ease-out
+        (120.0 - (120.0 - 58.0) * ease) * scale
+    } else {
+        120.0 * scale
+    };
     let base_h = 36.0 * scale;
+
+    reposition_pill(hwnd, scale, base_w as i32);
 
     let w = base_w.round() as usize;
     let h = base_h.round() as usize;
@@ -457,11 +466,17 @@ unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
             }
         }
         DictationState::Done => {
-            // Symmetrical vector emerald-mint checkmark with soft photon glow
+            // Injected state: Compact jewel + checkmark nestled inside shrunk capsule (no void)
+            let dot_x = cx - 11.0 * scale;
+            let dot_y = cy;
+            let dot_r = 3.0 * scale;
+            canvas.circle(dot_x, dot_y, dot_r, AQUA_ACCENT, Some((AQUA_ACCENT.with_alpha(0.35), 5.0 * scale)));
+
+            let check_x = cx + 5.0 * scale;
             let th = 2.0 * scale;
-            canvas.circle(cx, cy, 9.0 * scale, EMERALD_ACCENT.with_alpha(0.12), Some((EMERALD_ACCENT.with_alpha(0.35), 7.0 * scale)));
-            canvas.segment(cx - 4.5 * scale, cy, cx - 1.0 * scale, cy + 3.8 * scale, th, EMERALD_ACCENT);
-            canvas.segment(cx - 1.0 * scale, cy + 3.8 * scale, cx + 5.5 * scale, cy - 4.0 * scale, th, EMERALD_ACCENT);
+            canvas.circle(check_x, cy, 8.0 * scale, EMERALD_ACCENT.with_alpha(0.12), Some((EMERALD_ACCENT.with_alpha(0.35), 6.0 * scale)));
+            canvas.segment(check_x - 4.0 * scale, cy, check_x - 0.8 * scale, cy + 3.5 * scale, th, EMERALD_ACCENT);
+            canvas.segment(check_x - 0.8 * scale, cy + 3.5 * scale, check_x + 5.0 * scale, cy - 3.8 * scale, th, EMERALD_ACCENT);
         }
         DictationState::Error => {
             // Symmetrical amber status jewel in center
