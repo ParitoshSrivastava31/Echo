@@ -1,13 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use crossbeam_channel::{bounded, unbounded};
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 
-use echo::asr::{init_runtime, Asr4AllEngine, AsrEngine};
+use echo::asr::{init_runtime, Asr4AllEngine, AsrEngine, AsrPartial};
 use echo::audio::AudioCapture;
 use echo::benchmark::BenchmarkRunner;
 use echo::config::AppConfig;
@@ -16,6 +16,84 @@ use echo::hotkey::{HotkeyAction, HotkeyManager, TwoKeyCombo};
 use echo::insertion::TextInjector;
 use echo::ui::{DictationState, PillOverlay, TrayCommand, TrayManager};
 use echo::vocabulary::PersonalDictionary;
+
+enum AsrWorkerCommand {
+    Reset,
+    Audio(Vec<f32>),
+    Finish,
+    Shutdown,
+}
+
+enum AsrWorkerEvent {
+    Ready(Result<(), String>),
+    Finished(Result<AsrPartial, String>),
+}
+
+fn spawn_asr_worker(
+    engine: Arc<Asr4AllEngine>,
+) -> Result<(Sender<AsrWorkerCommand>, Receiver<AsrWorkerEvent>, std::thread::JoinHandle<()>), std::io::Error> {
+    let (command_tx, command_rx) = bounded::<AsrWorkerCommand>(2000);
+    let (event_tx, event_rx) = unbounded::<AsrWorkerEvent>();
+    let worker = std::thread::Builder::new()
+        .name("echo-asr".into())
+        .spawn(move || {
+            let mut session = match engine.create_session() {
+                Ok(session) => {
+                    let _ = event_tx.send(AsrWorkerEvent::Ready(Ok(())));
+                    session
+                }
+                Err(error) => {
+                    let message = error.to_string();
+                    let _ = event_tx.send(AsrWorkerEvent::Ready(Err(message.clone())));
+                    while let Ok(command) = command_rx.recv() {
+                        match command {
+                            AsrWorkerCommand::Finish => {
+                                let _ = event_tx.send(AsrWorkerEvent::Finished(Err(message.clone())));
+                            }
+                            AsrWorkerCommand::Shutdown => break,
+                            AsrWorkerCommand::Reset | AsrWorkerCommand::Audio(_) => {}
+                        }
+                    }
+                    return;
+                }
+            };
+            let mut failure: Option<String> = None;
+            while let Ok(command) = command_rx.recv() {
+                match command {
+                    AsrWorkerCommand::Reset => {
+                        session.reset();
+                        failure = None;
+                    }
+                    AsrWorkerCommand::Audio(samples) => {
+                        if failure.is_none() {
+                            failure = session.accept_audio(&samples).err().map(|e| e.to_string());
+                        }
+                    }
+                    AsrWorkerCommand::Finish => {
+                        let result = match failure.take() {
+                            Some(error) => Err(error),
+                            None => session.finish().map_err(|e| e.to_string()),
+                        };
+                        let _ = event_tx.send(AsrWorkerEvent::Finished(result));
+                    }
+                    AsrWorkerCommand::Shutdown => break,
+                }
+            }
+        })?;
+    Ok((command_tx, event_rx, worker))
+}
+
+fn queue_asr_audio(
+    command_tx: &Sender<AsrWorkerCommand>,
+    samples: Vec<f32>,
+    audio_fault: &AtomicBool,
+    dropped_chunks: &AtomicU64,
+) {
+    if command_tx.try_send(AsrWorkerCommand::Audio(samples)).is_err() {
+        audio_fault.store(true, Ordering::Relaxed);
+        dropped_chunks.fetch_add(1, Ordering::Relaxed);
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
@@ -176,8 +254,12 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
     let hotkey_mgr = HotkeyManager::start_listening(hotkey_tx, combo)?;
 
     let mut controller = DictationController::new(dict, config.suppress_fillers);
-    let mut current_session = engine.create_session()?;
+    let (asr_tx, asr_event_rx, asr_worker) = spawn_asr_worker(engine)?;
     let mut active_capture: Option<AudioCapture> = None;
+    let mut awaiting_finalization = false;
+    let mut quit_after_finalization = false;
+    let audio_fault = Arc::new(AtomicBool::new(false));
+    let dropped_chunks = Arc::new(AtomicU64::new(0));
 
     echo::log::info(&format!("Echo ready. Shortcut: {}", combo.to_display_str()));
 
@@ -189,9 +271,15 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(action) = action {
                     match action {
                         HotkeyAction::Start { mode } => {
-                            if active_capture.is_none() {
+                            if active_capture.is_none() && !awaiting_finalization {
                                 pill.set_state(DictationState::Listening, mode);
-                                current_session.reset();
+                                audio_fault.store(false, Ordering::Relaxed);
+                                dropped_chunks.store(0, Ordering::Relaxed);
+                                if asr_tx.send(AsrWorkerCommand::Reset).is_err() {
+                                    echo::log::info("ASR worker stopped before dictation could start");
+                                    pill.set_state(DictationState::Error, "");
+                                    continue;
+                                }
 
                                 match AudioCapture::start(config.microphone_name.as_deref(), audio_tx.clone()) {
                                     Ok(cap) => {
@@ -207,42 +295,28 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
                         HotkeyAction::Stop => {
                             if active_capture.is_some() {
                                 // Stop microphone capture immediately (turns off Windows recording mic dot)
-                                active_capture = None;
+                                if let Some(capture) = active_capture.take() {
+                                    let (mic_failed, capture_dropped) = capture.stop();
+                                    if mic_failed {
+                                        audio_fault.store(true, Ordering::Relaxed);
+                                    }
+                                    if capture_dropped > 0 {
+                                        dropped_chunks.fetch_add(capture_dropped, Ordering::Relaxed);
+                                        audio_fault.store(true, Ordering::Relaxed);
+                                    }
+                                }
                                 pill.set_state(DictationState::Processing, "");
 
                                 // Drain any remaining audio queued
                                 while let Ok(chunk) = audio_rx.try_recv() {
-                                    let _ = current_session.accept_audio(&chunk);
+                                    queue_asr_audio(&asr_tx, chunk, &audio_fault, &dropped_chunks);
                                 }
 
-                                // Finalize recognition
-                                match current_session.finish() {
-                                    Ok(res) => {
-                                        if !res.formatted.trim().is_empty() {
-                                            let ctx = InsertContext::current();
-                                            let output = controller.process_transcript(&res.formatted, &ctx);
-
-                                            match output {
-                                                ControllerOutput::InsertText(text) => {
-                                                    let _ = TextInjector::inject_text(&text);
-                                                }
-                                                ControllerOutput::ReplaceText { backspaces, text } => {
-                                                    TextInjector::send_backspaces(backspaces);
-                                                    if !text.is_empty() {
-                                                        let _ = TextInjector::inject_text(&text);
-                                                    }
-                                                }
-                                                ControllerOutput::NoOp => {}
-                                            }
-                                            pill.set_state(DictationState::Done, "");
-                                        } else {
-                                            pill.set_state(DictationState::Idle, "");
-                                        }
-                                    }
-                                    Err(e) => {
-                                        echo::log::info(&format!("Recognition finalize error: {e}"));
-                                        pill.set_state(DictationState::Idle, "");
-                                    }
+                                if asr_tx.send(AsrWorkerCommand::Finish).is_ok() {
+                                    awaiting_finalization = true;
+                                } else {
+                                    echo::log::info("ASR worker stopped before recognition could be finalized");
+                                    pill.set_state(DictationState::Error, "");
                                 }
                             }
                         }
@@ -255,7 +329,60 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
                     if active_capture.is_some() {
                         let rms = echo::audio::resampler::rms(&chunk);
                         pill.set_audio_level(rms);
-                        let _ = current_session.accept_audio(&chunk);
+                        queue_asr_audio(&asr_tx, chunk, &audio_fault, &dropped_chunks);
+                    }
+                }
+            }
+
+            recv(asr_event_rx) -> event => {
+                if let Ok(event) = event {
+                    match event {
+                        AsrWorkerEvent::Ready(Ok(())) => echo::log::info("ASR worker ready"),
+                        AsrWorkerEvent::Ready(Err(error)) => {
+                            echo::log::info(&format!("ASR worker initialization error: {error}"));
+                            pill.set_state(DictationState::Error, "");
+                        }
+                        AsrWorkerEvent::Finished(result) => {
+                            awaiting_finalization = false;
+                            let dropped = dropped_chunks.load(Ordering::Relaxed);
+                            if audio_fault.load(Ordering::Relaxed) {
+                                echo::log::info(&format!(
+                                    "Dictation audio was incomplete; {dropped} audio chunks were dropped or the microphone failed. Transcript withheld."
+                                ));
+                                pill.set_state(DictationState::Error, "");
+                            } else {
+                                match result {
+                                    Ok(res) if !res.formatted.trim().is_empty() => {
+                                        let ctx = InsertContext::current();
+                                        let output = controller.process_transcript(&res.formatted, &ctx);
+                                        let insertion = match output {
+                                            ControllerOutput::InsertText(text) => TextInjector::inject_text(&text),
+                                            ControllerOutput::ReplaceText { backspaces, text } => {
+                                                TextInjector::send_backspaces(backspaces);
+                                                if text.is_empty() { Ok(()) } else { TextInjector::inject_text(&text) }
+                                            }
+                                            ControllerOutput::NoOp => Ok(()),
+                                        };
+                                        match insertion {
+                                            Ok(()) => pill.set_state(DictationState::Done, ""),
+                                            Err(error) => {
+                                                echo::log::info(&format!("Text insertion error: {error}"));
+                                                controller.forget_last();
+                                                pill.set_state(DictationState::Error, "");
+                                            }
+                                        }
+                                    }
+                                    Ok(_) => pill.set_state(DictationState::Idle, ""),
+                                    Err(error) => {
+                                        echo::log::info(&format!("Recognition finalize error: {error}"));
+                                        pill.set_state(DictationState::Error, "");
+                                    }
+                                }
+                            }
+                            if quit_after_finalization {
+                                is_running.store(false, Ordering::Relaxed);
+                            }
+                        }
                     }
                 }
             }
@@ -298,8 +425,15 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
                             let _ = run_benchmark_command();
                         }
                         TrayCommand::Quit => {
-                            is_running.store(false, Ordering::Relaxed);
-                            break;
+                            if active_capture.is_some() {
+                                active_capture = None;
+                            }
+                            if awaiting_finalization {
+                                quit_after_finalization = true;
+                            } else {
+                                is_running.store(false, Ordering::Relaxed);
+                                break;
+                            }
                         }
                     }
                 }
@@ -310,6 +444,8 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
     pill.stop();
     tray.stop();
     hotkey_mgr.stop();
+    let _ = asr_tx.send(AsrWorkerCommand::Shutdown);
+    let _ = asr_worker.join();
     echo::log::info("Echo Voice Keyboard exited cleanly");
 
     Ok(())

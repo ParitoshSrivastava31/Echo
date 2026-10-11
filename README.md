@@ -1,8 +1,8 @@
 # Echo: Lightweight, Offline English Voice Keyboard for Windows
 
-[![Release](https://img.shields.io/badge/Release-v0.2.0-00C7B1?style=flat&logo=windows)](https://github.com/ParitoshSrivastava31/Echo/releases/tag/v0.2.0)
-[![Direct Download](https://img.shields.io/badge/Download-Installer%20(.exe)-blue?logo=windows&color=0078D4)](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-Setup-v0.2.0.exe)
-[![Tests](https://img.shields.io/badge/tests-28%20passed-brightgreen)](https://github.com/ParitoshSrivastava31/Echo)
+[![Release](https://img.shields.io/badge/Release-v0.2.1-00C7B1?style=flat&logo=windows)](https://github.com/ParitoshSrivastava31/Echo/releases/tag/v0.2.1)
+[![Direct Download](https://img.shields.io/badge/Download-Installer%20(.exe)-blue?logo=windows&color=0078D4)](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-Setup-v0.2.1.exe)
+[![Windows Release](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml/badge.svg)](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Windows 11 / 10](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-0078D4.svg)](https://github.com/ParitoshSrivastava31/Echo)
 
@@ -12,12 +12,12 @@ Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation e
 
 ---
 
-## ⚡ Instant Download for Windows (v0.2.0)
+## ⚡ Instant Download for Windows (v0.2.1)
 
 | Package | Direct Download Link | Format | Size |
 | :--- | :--- | :--- | :--- |
-| **Windows Installer (Recommended)** | 🚀 **[Echo-Setup-v0.2.0.exe](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-Setup-v0.2.0.exe)** | Single-click self-extracting setup | ~99 MB |
-| **Portable ZIP** | 📦 **[Echo-v0.2.0-windows-x64.zip](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-v0.2.0-windows-x64.zip)** | Standalone portable folder | ~108 MB |
+| **Windows Installer (Recommended)** | 🚀 **[Echo-Setup-v0.2.1.exe](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-Setup-v0.2.1.exe)** | Single-click self-extracting setup | ~99 MB |
+| **Portable ZIP** | 📦 **[Echo-v0.2.1-windows-x64.zip](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-v0.2.1-windows-x64.zip)** | Standalone portable folder | ~108 MB |
 
 *All speech models and runtime DLLs are fully bundled. Zero cloud setup or internet connection required.*
 
@@ -42,6 +42,7 @@ Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation e
   - **No Console Window**: Runs as a true native Windows GUI app (`windows_subsystem = "windows"`).
   - **Per-Monitor V2 DPI Aware**: Sharp, anti-aliased software rendering on 100%, 125%, 150%, and 200% scaling.
 - **Genuine Incremental Streaming**: Powered by FUTO's `asr4all-s` (28.1M parameter DFSMN architecture) with left-context frame caches. Each audio frame is processed incrementally without redundant recalculations.
+- **Audio-loss detection**: Recognition runs on a dedicated worker so inference does not block microphone queue draining. Known audio queue drops or microphone errors are reported and the incomplete transcript is withheld.
 - **Deterministic Dictation Controller**:
   - **Spoken Commands**: *"new line"*, *"new paragraph"*, *"comma"*, *"period"*, *"question mark"*, *"exclamation point"*, *"open quote"*, *"close quote"*, *"colon"*, *"semicolon"*.
   - **Voice Corrections & Undo**: *"scratch that"* or *"undo that"* erases the last segment; inline self-corrections like *"call him Tuesday, actually Wednesday"* automatically replace the corrected words.
@@ -52,7 +53,7 @@ Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation e
 
 ## 📊 Performance & Benchmark
 
-Tested on development target (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2.50GHz, 8 GB RAM, Windows 11 Home 64-bit):
+Previously measured on one 11-second JFK reference clip using the development target (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2.50GHz, 8 GB RAM, Windows 11 Home 64-bit). These figures do not measure developer prompts, varied accents, or performance of the new audio-loss handling. The zero WER/CER result is a single-clip baseline, not a general accuracy claim.
 
 | Metric | Measured Result | Project Goal | Status |
 | :--- | :--- | :--- | :--- |
@@ -62,9 +63,9 @@ Tested on development target (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2
 | **Active CPU (Speaking)** | **< 9% of 1 core** | Minimized | ✅ Passed |
 | **Inference Processing (11.0s clip)** | **928.86 ms** | Low latency | ✅ Passed |
 | **Real-Time Factor (RTFx)** | **11.84x faster than real-time** | > 1.0x | ✅ Passed |
-| **Word Error Rate (WER)** | **0.00%** on reference audio | Baseline | ✅ Passed |
-| **Character Error Rate (CER)** | **0.00%** on reference audio | Baseline | ✅ Passed |
-| **Test Suite** | **28 tests passing** (unit + integration) | Verified | ✅ Passed |
+| **Word Error Rate (WER)** | **0.00%** on one JFK reference clip | Single-clip baseline | Measured |
+| **Character Error Rate (CER)** | **0.00%** on one JFK reference clip | Single-clip baseline | Measured |
+| **Test Suite** | **28 tests** (previous release baseline) | CI on release | — |
 
 ---
 
@@ -74,14 +75,14 @@ Tested on development target (Acer Aspire A715-75G, Intel Core i5-10300H CPU @ 2
 
 Download the latest installer from the [Releases](https://github.com/ParitoshSrivastava31/Echo/releases) page:
 
-1. Download **`Echo-Setup-v0.2.0.exe`** (approx. 99 MB, self-contained with model weights and ONNX runtime).
+1. Download **`Echo-Setup-v0.2.1.exe`** (approx. 99 MB, self-contained with model weights and ONNX runtime).
 2. Double-click to install. It installs to your user profile (`%LOCALAPPDATA%\Programs\Echo`) without requiring administrator permissions.
 3. Optionally enable **"Start Echo when Windows starts"** and **"Create Desktop Shortcut"**.
 4. Echo launches immediately and docks silently in your Windows System Tray.
 
 ### Option 2: Portable ZIP
 
-1. Download **`Echo-v0.2.0-windows-x64.zip`**.
+1. Download **`Echo-v0.2.1-windows-x64.zip`**.
 2. Extract to any folder (e.g. `C:\Tools\Echo`).
 3. Run `echo.exe`.
 
@@ -144,7 +145,7 @@ Right-click the Echo icon in the System Tray to access settings:
 git clone https://github.com/ParitoshSrivastava31/Echo.git
 cd echo
 
-# Run tests (all 28 tests)
+# Run the test suite
 cargo test --release
 
 # Build optimized release binary
@@ -157,7 +158,7 @@ cargo run -- write-ico
 & "ISCC.exe" scripts\installer.iss
 ```
 
-The resulting installer is generated at `dist\Echo-Setup-v0.2.0.exe`.
+The resulting installer is generated at `dist\Echo-Setup-v0.2.1.exe`.
 
 ### Diagnostic Commands
 

@@ -72,7 +72,7 @@ jobs:
       - name: Create Portable Zip Package
         shell: pwsh
         run: |
-          $tag = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF -replace "refs/tags/", "" } else { "v0.2.0" }
+          $tag = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF -replace "refs/tags/", "" } else { "v0.2.1" }
           $zipName = "dist\Echo-$tag-windows-x64.zip"
           Compress-Archive -Path target\release\echo.exe, models\onnxruntime.dll, echo.ico, models -DestinationPath $zipName -Force
 

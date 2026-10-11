@@ -1,0 +1,58 @@
+{"id":"dev-001","category":"coding_request","text":"Open the authentication module, trace the sign-in flow, and add rate limiting without changing the public API.","terms":["authentication","rate limiting","API"]}
+{"id":"dev-002","category":"coding_request","text":"Add a loading state to the settings page and keep the current keyboard navigation working.","terms":["loading state","keyboard navigation"]}
+{"id":"dev-003","category":"coding_request","text":"Refactor the payment handler into smaller functions, but preserve the existing error responses.","terms":["refactor","payment handler"]}
+{"id":"dev-004","category":"coding_request","text":"Write a migration that adds a nullable last seen at column to the users table.","terms":["migration","nullable","last_seen_at"]}
+{"id":"dev-005","category":"coding_request","text":"Update the API client to retry on a 503 response with exponential backoff.","terms":["API client","503","exponential backoff"]}
+{"id":"dev-006","category":"coding_request","text":"Add an integration test for expired refresh tokens and verify that the session is revoked.","terms":["integration test","refresh tokens","session"]}
+{"id":"dev-007","category":"coding_request","text":"Keep the change small, follow the existing patterns, and explain any tradeoffs before editing.","terms":["existing patterns","tradeoffs"]}
+{"id":"dev-008","category":"coding_request","text":"Find why the search endpoint returns duplicate results when the query has two filters.","terms":["search endpoint","query","filters"]}
+{"id":"dev-009","category":"coding_request","text":"Move the shared validation into a helper and reuse it in both the create and update routes.","terms":["validation","helper","routes"]}
+{"id":"dev-010","category":"coding_request","text":"Add pagination to the admin table, default to twenty rows, and preserve the selected sort order.","terms":["pagination","admin table","sort order"]}
+{"id":"dev-011","category":"coding_request","text":"Before you change anything, inspect the repository and tell me which files own the background job flow.","terms":["repository","background job flow"]}
+{"id":"dev-012","category":"coding_request","text":"Implement the fix, run the existing checks, and summarize the behavior that changed.","terms":["existing checks"]}
+{"id":"dev-013","category":"debugging","text":"The bug only happens after a reconnect, so check whether the WebSocket listener is registered twice.","terms":["reconnect","WebSocket"]}
+{"id":"dev-014","category":"debugging","text":"The build passes locally, but GitHub Actions fails during the TypeScript type check.","terms":["GitHub Actions","TypeScript"]}
+{"id":"dev-015","category":"debugging","text":"The API returns a 401 after token refresh, even though the access token has not expired.","terms":["API","401","token refresh"]}
+{"id":"dev-016","category":"debugging","text":"Check the Docker logs first, then compare the container environment with the local environment.","terms":["Docker","container"]}
+{"id":"dev-017","category":"debugging","text":"The query is fast in development but times out in production when the table has several million rows.","terms":["query","production","times out"]}
+{"id":"dev-018","category":"debugging","text":"I think the cache key is missing the tenant ID, which could return another customer's data.","terms":["cache key","tenant ID"]}
+{"id":"dev-019","category":"debugging","text":"The worker retries forever when Redis is unavailable; cap it at five attempts and add a dead letter queue.","terms":["worker","Redis","dead letter queue"]}
+{"id":"dev-020","category":"debugging","text":"Compare the staging and production configuration, especially the CORS origins and callback URL.","terms":["staging","production","CORS"]}
+{"id":"dev-021","category":"technical_terms","text":"The frontend uses React, Next.js, and TypeScript, while the API is written in Go.","terms":["React","Next.js","TypeScript","Go"]}
+{"id":"dev-022","category":"technical_terms","text":"Store session data in PostgreSQL and use Redis only for short lived cache entries.","terms":["PostgreSQL","Redis"]}
+{"id":"dev-023","category":"technical_terms","text":"The service runs on Kubernetes, and Helm manages the deployment values for each environment.","terms":["Kubernetes","Helm"]}
+{"id":"dev-024","category":"technical_terms","text":"Use Prisma for the schema migration, then check the generated SQL before applying it.","terms":["Prisma","schema migration","SQL"]}
+{"id":"dev-025","category":"technical_terms","text":"The Python worker calls a FastAPI endpoint and publishes the result to an SQS queue.","terms":["Python","FastAPI","SQS"]}
+{"id":"dev-026","category":"technical_terms","text":"Add OAuth with PKCE, validate the JWT audience, and rotate the signing key.","terms":["OAuth","PKCE","JWT"]}
+{"id":"dev-027","category":"technical_terms","text":"We use ONNX Runtime for local inference and keep the model files in the application data folder.","terms":["ONNX Runtime","inference"]}
+{"id":"dev-028","category":"technical_terms","text":"The Rust command should use Cargo features so the GPU backend stays optional.","terms":["Rust","Cargo","GPU"]}
+{"id":"dev-029","category":"technical_terms","text":"Publish the container to Amazon ECR and deploy it to the staging cluster.","terms":["Amazon ECR","container","staging"]}
+{"id":"dev-030","category":"technical_terms","text":"Use a gRPC stream for events, but keep the health check available over plain HTTP.","terms":["gRPC","health check","HTTP"]}
+{"id":"dev-031","category":"prompting","text":"Act as a senior engineer. First map the existing flow, then propose the smallest safe change and wait for review before deployment.","terms":["existing flow","safe change","deployment"]}
+{"id":"dev-032","category":"prompting","text":"Do not rewrite the whole component. Fix the keyboard bug, preserve screen reader support, and add a regression test.","terms":["component","keyboard bug","screen reader","regression test"]}
+{"id":"dev-033","category":"prompting","text":"Review this diff for correctness, security issues, and missing error handling. Report only actionable findings.","terms":["diff","security","error handling"]}
+{"id":"dev-034","category":"prompting","text":"Explain the root cause in plain English, show the relevant code path, and separate confirmed facts from guesses.","terms":["root cause","code path"]}
+{"id":"dev-035","category":"prompting","text":"If the requirement is ambiguous, inspect the nearby code and make the least surprising choice without adding a new dependency.","terms":["requirement","dependency"]}
+{"id":"dev-036","category":"prompting","text":"Create a plan first, but keep working on independent parts while waiting for an answer about the database choice.","terms":["plan","database"]}
+{"id":"dev-037","category":"prompting","text":"Search for every caller before changing the function, then update the implementation and its existing tests.","terms":["caller","implementation"]}
+{"id":"dev-038","category":"prompting","text":"Don't invent benchmark numbers. Record the dataset, model version, hardware, and exact command used.","terms":["benchmark","model version","hardware"]}
+{"id":"dev-039","category":"code_spelling","text":"The config file is called echo dot toml, and the environment variable is echo model path.","terms":["echo.toml","ECHO_MODEL_PATH"]}
+{"id":"dev-040","category":"code_spelling","text":"Set max retries to three, timeout to two hundred milliseconds, and the cache TTL to fifteen minutes.","terms":["max_retries","200 milliseconds","cache TTL"]}
+{"id":"dev-041","category":"code_spelling","text":"The package is at slash source slash auth slash token dot ts, not in the legacy folder.","terms":["/src/auth/token.ts","legacy"]}
+{"id":"dev-042","category":"code_spelling","text":"Run cargo test, cargo clippy, and cargo fmt before you open the pull request.","terms":["cargo test","cargo clippy","cargo fmt","pull request"]}
+{"id":"dev-043","category":"code_spelling","text":"The route is slash v two slash users slash user ID, and the query parameter is include archived.","terms":["/v2/users/{userId}","includeArchived"]}
+{"id":"dev-044","category":"code_spelling","text":"Use the feature flag called new dictation pipeline and leave it disabled by default.","terms":["new-dictation-pipeline","feature flag"]}
+{"id":"dev-045","category":"numbers_and_versions","text":"Upgrade from Rust one point eighty five to one point eighty six, but keep the minimum Windows version unchanged.","terms":["Rust 1.85","1.86","Windows"]}
+{"id":"dev-046","category":"numbers_and_versions","text":"The endpoint should accept up to one hundred requests per minute per user.","terms":["100 requests per minute"]}
+{"id":"dev-047","category":"numbers_and_versions","text":"Compare version four point two point zero with four point three point one before updating the lock file.","terms":["4.2.0","4.3.1","lock file"]}
+{"id":"dev-048","category":"numbers_and_versions","text":"The test should cover a zero byte file, a one megabyte file, and a file just over the upload limit.","terms":["zero byte","one megabyte","upload limit"]}
+{"id":"dev-049","category":"corrections_and_fluency","text":"Add the retry to the upload handler, actually put it in the shared HTTP client so downloads get it too.","terms":["retry","upload handler","HTTP client"]}
+{"id":"dev-050","category":"corrections_and_fluency","text":"The issue is in the login page, sorry, I mean the callback handler after the identity provider redirects back.","terms":["login page","callback handler","identity provider"]}
+{"id":"dev-051","category":"corrections_and_fluency","text":"Keep the old response shape, scratch that, keep the old field names but add the new status field.","terms":["response shape","field names","status field"]}
+{"id":"dev-052","category":"corrections_and_fluency","text":"I said Dynamo, I mean DynamoDB, and the table name is user preferences.","terms":["DynamoDB","user preferences"]}
+{"id":"dev-053","category":"everyday_developer_speech","text":"I have a rough idea for the feature. Let me talk through the edge cases before we decide how to structure it.","terms":["feature","edge cases"]}
+{"id":"dev-054","category":"everyday_developer_speech","text":"Can you explain what this code does first? I don't want a cleanup mixed into the bug fix.","terms":["code","cleanup","bug fix"]}
+{"id":"dev-055","category":"everyday_developer_speech","text":"Let's ship the fix behind a flag, watch the error rate, and remove the fallback after the rollout is stable.","terms":["feature flag","error rate","rollout"]}
+{"id":"dev-056","category":"everyday_developer_speech","text":"The README says the app works offline, but the first launch still tries to download the model.","terms":["README","offline","model"]}
+{"id":"dev-057","category":"everyday_developer_speech","text":"I can reproduce it on Windows, but I haven't checked whether the same issue happens on macOS.","terms":["Windows","reproduce","macOS"]}
+{"id":"dev-058","category":"everyday_developer_speech","text":"Let's keep the logs useful for debugging, but never write microphone audio or transcript text to disk.","terms":["logs","microphone audio","transcript"]}

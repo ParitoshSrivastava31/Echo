@@ -1,7 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SizedSample, Stream};
 use crossbeam_channel::Sender;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use super::resampler::LinearResampler;
@@ -11,6 +11,7 @@ use super::resampler::LinearResampler;
 pub struct AudioCapture {
     _stream: Stream,
     failed: Arc<AtomicBool>,
+    dropped_chunks: Arc<AtomicU64>,
     pub device_name: String,
 }
 
@@ -36,25 +37,32 @@ impl AudioCapture {
         let name = device.name().unwrap_or_else(|_| "Microphone".into());
         let config = device.default_input_config().map_err(|e| e.to_string())?;
         let failed = Arc::new(AtomicBool::new(false));
+        let dropped_chunks = Arc::new(AtomicU64::new(0));
 
         let stream = match config.sample_format() {
-            cpal::SampleFormat::F32 => build::<f32>(&device, &config, tx, failed.clone(), |s| s),
-            cpal::SampleFormat::I16 => build::<i16>(&device, &config, tx, failed.clone(), |s| s as f32 / 32768.0),
+            cpal::SampleFormat::F32 => build::<f32>(&device, &config, tx, failed.clone(), dropped_chunks.clone(), |s| s),
+            cpal::SampleFormat::I16 => build::<i16>(&device, &config, tx, failed.clone(), dropped_chunks.clone(), |s| s as f32 / 32768.0),
             cpal::SampleFormat::U16 => {
-                build::<u16>(&device, &config, tx, failed.clone(), |s| (s as f32 - 32768.0) / 32768.0)
+                build::<u16>(&device, &config, tx, failed.clone(), dropped_chunks.clone(), |s| (s as f32 - 32768.0) / 32768.0)
             }
             cpal::SampleFormat::I32 => {
-                build::<i32>(&device, &config, tx, failed.clone(), |s| s as f32 / 2_147_483_648.0)
+                build::<i32>(&device, &config, tx, failed.clone(), dropped_chunks.clone(), |s| s as f32 / 2_147_483_648.0)
             }
             f => return Err(format!("Unsupported microphone sample format {f:?}")),
         }?;
         stream.play().map_err(|e| e.to_string())?;
-        Ok(Self { _stream: stream, failed, device_name: name })
+        Ok(Self { _stream: stream, failed, dropped_chunks, device_name: name })
     }
 
-    /// True if the device reported an error (e.g. it was unplugged).
-    pub fn has_failed(&self) -> bool {
-        self.failed.load(Ordering::Relaxed)
+    /// Stop capture before reading its final device-error and queue-overflow state.
+    pub fn stop(self) -> (bool, u64) {
+        let failed = Arc::clone(&self.failed);
+        let dropped_chunks = Arc::clone(&self.dropped_chunks);
+        drop(self);
+        (
+            failed.load(Ordering::Relaxed),
+            dropped_chunks.load(Ordering::Relaxed),
+        )
     }
 }
 
@@ -63,6 +71,7 @@ fn build<T: SizedSample + Copy + Send + 'static>(
     config: &cpal::SupportedStreamConfig,
     tx: Sender<Vec<f32>>,
     failed: Arc<AtomicBool>,
+    dropped_chunks: Arc<AtomicU64>,
     to_f32: fn(T) -> f32,
 ) -> Result<Stream, String> {
     let channels = config.channels();
@@ -76,8 +85,11 @@ fn build<T: SizedSample + Copy + Send + 'static>(
                 scratch.extend(data.iter().map(|&s| to_f32(s)));
                 let out = resampler.process_interleaved(&scratch, channels);
                 if !out.is_empty() {
-                    // Bounded channel: if the worker ever falls behind we drop rather than block the audio thread.
-                    let _ = tx.try_send(out);
+                    // Never block the real-time capture callback. Count any overflow so the
+                    // controller can refuse to insert a transcript with a known audio gap.
+                    if tx.try_send(out).is_err() {
+                        dropped_chunks.fetch_add(1, Ordering::Relaxed);
+                    }
                 }
             },
             move |_err| failed.store(true, Ordering::Relaxed),
