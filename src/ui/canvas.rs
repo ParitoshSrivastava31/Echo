@@ -35,18 +35,24 @@ impl Rgba {
     }
 }
 
-/// Palette: Dieter Rams / Jony Ive industrial & acoustic tones.
 pub const TITANIUM_WHITE: Rgba = Rgba::hex(0xF8FAFC, 1.0);
 pub const TITANIUM_SILVER: Rgba = Rgba::hex(0xE2E8F0, 0.85);
-pub const BRAUN_CORAL: Rgba = Rgba::hex(0xFF4500, 1.0);
-pub const BRAUN_CORAL_LIVE: Rgba = Rgba::hex(0xFF5A36, 1.0);
-pub const EMERALD_ACCENT: Rgba = Rgba::hex(0x30D158, 1.0);
-pub const AMBER_ACCENT: Rgba = Rgba::hex(0xFF9500, 1.0);
+pub const TITANIUM_SLATE: Rgba = Rgba::hex(0x1E2530, 0.95);
+pub const TITANIUM_GRAPHITE: Rgba = Rgba::hex(0x334155, 0.90);
 
+pub const AQUA_ACCENT: Rgba = Rgba::hex(0x00C7B1, 1.0);
+pub const AQUA_ACCENT_LIVE: Rgba = Rgba::hex(0x00E5CC, 1.0);
+pub const BRAUN_CORAL: Rgba = Rgba::hex(0x00C7B1, 1.0); // Unified with subtle luxury aqua
+pub const BRAUN_CORAL_LIVE: Rgba = Rgba::hex(0x00E5CC, 1.0);
+pub const EMERALD_ACCENT: Rgba = Rgba::hex(0x00C48C, 1.0);
+pub const AMBER_ACCENT: Rgba = Rgba::hex(0xFFB020, 1.0);
+
+pub const WHITE_CERAMIC_TOP: Rgba = Rgba::hex(0xFFFFFF, 0.96);
+pub const WHITE_CERAMIC_BOTTOM: Rgba = Rgba::hex(0xF4F6F8, 0.94);
 pub const BRAND_TOP: Rgba = Rgba::hex(0x262832, 1.0);
 pub const BRAND_BOTTOM: Rgba = Rgba::hex(0x111217, 1.0);
-pub const LIVE_TOP: Rgba = Rgba::hex(0x38201E, 1.0);
-pub const LIVE_BOTTOM: Rgba = Rgba::hex(0x1C0E0D, 1.0);
+pub const LIVE_TOP: Rgba = Rgba::hex(0x1E2B2A, 1.0);
+pub const LIVE_BOTTOM: Rgba = Rgba::hex(0x0E1716, 1.0);
 
 /// Premultiplied BGRA canvas (the format `UpdateLayeredWindow` expects).
 pub struct Canvas {

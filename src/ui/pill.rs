@@ -19,7 +19,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::canvas::{
-    Canvas, Rgba, AMBER_ACCENT, BRAUN_CORAL, EMERALD_ACCENT, TITANIUM_SILVER, TITANIUM_WHITE,
+    Canvas, Rgba, AMBER_ACCENT, AQUA_ACCENT, EMERALD_ACCENT, TITANIUM_GRAPHITE, TITANIUM_SLATE,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -313,8 +313,8 @@ unsafe fn reposition_pill(hwnd: HWND, scale: f32) {
         let mon_width = work.right - work.left;
         let mon_bottom = work.bottom;
 
-        let pill_w = (156.0 * scale) as i32;
-        let pill_h = (40.0 * scale) as i32;
+        let pill_w = (120.0 * scale) as i32;
+        let pill_h = (36.0 * scale) as i32;
 
         let x = work.left + (mon_width - pill_w) / 2;
         let y = mon_bottom - pill_h - (48.0 * scale) as i32;
@@ -334,8 +334,8 @@ unsafe fn reposition_pill(hwnd: HWND, scale: f32) {
 /// Renders the liquid glass pill with audio visualizer waveform and crisp typography
 unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
     let scale = inner.dpi_scale;
-    let base_w = 156.0 * scale;
-    let base_h = 40.0 * scale;
+    let base_w = 120.0 * scale;
+    let base_h = 36.0 * scale;
 
     let w = base_w.round() as usize;
     let h = base_h.round() as usize;
@@ -344,25 +344,25 @@ unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
 
     let cx = w as f32 / 2.0;
     let cy = h as f32 / 2.0;
-    let hw = (w as f32 - 10.0 * scale) / 2.0;
-    let hh = (h as f32 - 10.0 * scale) / 2.0;
+    let hw = (w as f32 - 8.0 * scale) / 2.0;
+    let hh = (h as f32 - 8.0 * scale) / 2.0;
     let r = hh; // Full round pill capsule
 
-    // 1. Dual-layer soft ambient drop shadow
-    canvas.shadow(cx, cy + 2.5 * scale, hw, hh, r, 10.0 * scale, 0.30);
-    canvas.shadow(cx, cy + 1.0 * scale, hw, hh, r, 4.0 * scale, 0.25);
+    // 1. Dual-layer soft ambient drop shadow (subtle, delicate studio shadow)
+    canvas.shadow(cx, cy + 2.0 * scale, hw, hh, r, 7.0 * scale, 0.14);
+    canvas.shadow(cx, cy + 0.8 * scale, hw, hh, r, 2.5 * scale, 0.10);
 
-    // 2. Liquid Dark Obsidian Acrylic Glass Body (translucent Apple glass)
-    let top_color = Rgba::hex(0x14161C, 0.94);
-    let bottom_color = Rgba::hex(0x0A0B0F, 0.96);
+    // 2. Pristine Jony Ive / Dieter Rams White Ceramic & Frosted Acrylic Body
+    let top_color = Rgba::hex(0xFFFFFF, 0.96);
+    let bottom_color = Rgba::hex(0xF4F6F8, 0.94);
 
     // Subtle dual-tone hairline rim border
     let (border_color, border_w) = match inner.state {
-        DictationState::Listening => (BRAUN_CORAL.with_alpha(0.35), 1.0 * scale),
-        DictationState::Processing => (Rgba::hex(0xFFFFFF, 0.25), 1.0 * scale),
-        DictationState::Done => (EMERALD_ACCENT.with_alpha(0.40), 1.0 * scale),
+        DictationState::Listening => (AQUA_ACCENT.with_alpha(0.40), 1.0 * scale),
+        DictationState::Processing => (Rgba::hex(0x00C7B1, 0.30), 1.0 * scale),
+        DictationState::Done => (EMERALD_ACCENT.with_alpha(0.45), 1.0 * scale),
         DictationState::Error => (AMBER_ACCENT.with_alpha(0.45), 1.0 * scale),
-        DictationState::Idle => (Rgba::hex(0xFFFFFF, 0.12), 1.0 * scale),
+        DictationState::Idle => (Rgba::hex(0x000000, 0.08), 1.0 * scale),
     };
 
     canvas.round_rect(
@@ -377,12 +377,12 @@ unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
     );
 
     // 3. Specular reflection sheen highlight along the upper crest
-    let sheen_top = Rgba::hex(0xFFFFFF, 0.14);
+    let sheen_top = Rgba::hex(0xFFFFFF, 0.40);
     let sheen_bottom = Rgba::hex(0xFFFFFF, 0.0);
     canvas.round_rect(
         cx,
         cy - hh * 0.45,
-        hw - 6.0 * scale,
+        hw - 4.0 * scale,
         hh * 0.35,
         r * 0.35,
         sheen_top,
@@ -393,33 +393,33 @@ unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
     // 4. Content Elements depending on state
     match inner.state {
         DictationState::Listening => {
-            // Dieter Rams signature coral status jewel on the left
-            let dot_x = cx - hw + 18.0 * scale;
+            // Dieter Rams / Jony Ive luxury aqua status jewel on the left
+            let dot_x = cx - hw + 14.0 * scale;
             let dot_y = cy;
-            let dot_r = 3.8 * scale;
-            let pulse = ((inner.anim_time * 5.0).sin() * 0.2 + 0.8).clamp(0.0, 1.0);
+            let dot_r = 3.2 * scale;
+            let pulse = ((inner.anim_time * 4.5).sin() * 0.15 + 0.85).clamp(0.0, 1.0);
 
-            // Breathing soft photon halo
-            let glow_radius = 7.0 * scale * pulse;
+            // Breathing soft cyan photon halo
+            let glow_radius = 5.5 * scale * pulse;
             canvas.circle(
                 dot_x,
                 dot_y,
                 dot_r,
-                BRAUN_CORAL,
-                Some((BRAUN_CORAL.with_alpha(0.45 * pulse), glow_radius)),
+                AQUA_ACCENT,
+                Some((AQUA_ACCENT.with_alpha(0.40 * pulse), glow_radius)),
             );
 
-            // Symmetrical 7 precision harmonic Gaussian acoustic needles
-            let bars_center_x = cx + 8.0 * scale;
+            // Symmetrical 7 precision harmonic Gaussian acoustic needles in slate titanium
+            let bars_center_x = cx + 6.0 * scale;
             let bars_count = 7;
-            let bar_w = 2.4 * scale;
-            let bar_gap = 3.0 * scale;
+            let bar_w = 2.0 * scale;
+            let bar_gap = 2.4 * scale;
             let total_w = bars_count as f32 * bar_w + (bars_count as f32 - 1.0) * bar_gap;
             let start_x = bars_center_x - total_w / 2.0 + bar_w / 2.0;
 
             let gauss = [0.20f32, 0.45, 0.78, 1.00, 0.78, 0.45, 0.20];
             let max_h = hh * 1.25;
-            let min_h = 3.2 * scale;
+            let min_h = 3.0 * scale;
             let vol = inner.smooth_level.clamp(0.0, 1.0);
 
             for (i, &g_mult) in gauss.iter().enumerate() {
@@ -430,47 +430,47 @@ unsafe fn render_pill(hwnd: HWND, inner: &PillInner) {
                     cy,
                     bar_w * 0.5,
                     bh * 0.5,
-                    TITANIUM_WHITE,
+                    TITANIUM_SLATE,
                 );
             }
         }
         DictationState::Processing => {
-            // Symmetrical traveling wave shimmer across 7 needles in soft titanium
+            // Symmetrical traveling wave shimmer across 7 needles in soft graphite
             let bars_center_x = cx;
             let bars_count = 7;
-            let bar_w = 2.4 * scale;
-            let bar_gap = 3.2 * scale;
+            let bar_w = 2.0 * scale;
+            let bar_gap = 2.4 * scale;
             let total_w = bars_count as f32 * bar_w + (bars_count as f32 - 1.0) * bar_gap;
             let start_x = bars_center_x - total_w / 2.0 + bar_w / 2.0;
 
             for i in 0..bars_count {
                 let bx = start_x + (i as f32) * (bar_w + bar_gap);
                 let phase = ((inner.anim_time * 6.0 + i as f32 * 0.9).sin() * 0.5 + 0.5).clamp(0.2, 1.0);
-                let bh = (6.0 + 12.0 * phase) * scale;
+                let bh = (5.0 + 10.0 * phase) * scale;
                 canvas.capsule(
                     bx,
                     cy,
                     bar_w * 0.5,
                     bh * 0.5,
-                    TITANIUM_SILVER,
+                    TITANIUM_GRAPHITE,
                 );
             }
         }
         DictationState::Done => {
-            // Symmetrical vector emerald checkmark with soft photon glow
-            let th = 2.2 * scale;
-            canvas.circle(cx, cy, 10.0 * scale, EMERALD_ACCENT.with_alpha(0.12), Some((EMERALD_ACCENT.with_alpha(0.35), 8.0 * scale)));
-            canvas.segment(cx - 5.0 * scale, cy, cx - 1.0 * scale, cy + 4.0 * scale, th, EMERALD_ACCENT);
-            canvas.segment(cx - 1.0 * scale, cy + 4.0 * scale, cx + 6.5 * scale, cy - 4.5 * scale, th, EMERALD_ACCENT);
+            // Symmetrical vector emerald-mint checkmark with soft photon glow
+            let th = 2.0 * scale;
+            canvas.circle(cx, cy, 9.0 * scale, EMERALD_ACCENT.with_alpha(0.12), Some((EMERALD_ACCENT.with_alpha(0.35), 7.0 * scale)));
+            canvas.segment(cx - 4.5 * scale, cy, cx - 1.0 * scale, cy + 3.8 * scale, th, EMERALD_ACCENT);
+            canvas.segment(cx - 1.0 * scale, cy + 3.8 * scale, cx + 5.5 * scale, cy - 4.0 * scale, th, EMERALD_ACCENT);
         }
         DictationState::Error => {
             // Symmetrical amber status jewel in center
             canvas.circle(
                 cx,
                 cy,
-                6.0 * scale,
+                5.5 * scale,
                 AMBER_ACCENT,
-                Some((AMBER_ACCENT.with_alpha(0.40), 8.0 * scale)),
+                Some((AMBER_ACCENT.with_alpha(0.40), 7.0 * scale)),
             );
         }
         DictationState::Idle => {}

@@ -1,7 +1,7 @@
 # Echo: Lightweight, Offline English Voice Keyboard for Windows
 
-[![Release](https://img.shields.io/github/v/release/ParitoshSrivastava31/Echo?color=emerald&label=Release)](https://github.com/ParitoshSrivastava31/Echo/releases)
-[![Build & Release](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml/badge.svg)](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml)
+[![Release](https://img.shields.io/badge/Release-v0.2.0-00C7B1?style=flat&logo=windows)](https://github.com/ParitoshSrivastava31/Echo/releases/tag/v0.2.0)
+[![Direct Download](https://img.shields.io/badge/Download-Installer%20(.exe)-blue?logo=windows&color=0078D4)](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-Setup-v0.2.0.exe)
 [![Tests](https://img.shields.io/badge/tests-28%20passed-brightgreen)](https://github.com/ParitoshSrivastava31/Echo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Windows 11 / 10](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-0078D4.svg)](https://github.com/ParitoshSrivastava31/Echo)
@@ -12,15 +12,27 @@ Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation e
 
 ---
 
+## ⚡ Instant Download for Windows (v0.2.0)
+
+| Package | Direct Download Link | Format | Size |
+| :--- | :--- | :--- | :--- |
+| **Windows Installer (Recommended)** | 🚀 **[Echo-Setup-v0.2.0.exe](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-Setup-v0.2.0.exe)** | Single-click self-extracting setup | ~99 MB |
+| **Portable ZIP** | 📦 **[Echo-v0.2.0-windows-x64.zip](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.0/Echo-v0.2.0-windows-x64.zip)** | Standalone portable folder | ~108 MB |
+
+*All speech models and runtime DLLs are fully bundled. Zero cloud setup or internet connection required.*
+
+---
+
 ## ⚡ Key Highlights
 
 - **100% Offline & Private**: Zero cloud transcription, zero telemetry, zero audio recordings retained. All processing runs entirely on your local machine.
-- **Floating Pill HUD (Apple & Dieter Rams / Braun Aesthetic)**:
-  - **Fixed 156×40 px Ultra-Compact Capsule**: Never expands or jumps in size; remains compact, pristine, and unobtrusive at the bottom-center of your screen.
-  - **Non-Interfering**: Built with Win32 layered windows (`WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`). Never steals keyboard focus from your active editor, and mouse clicks pass right through.
-  - **Dieter Rams Coral Status Jewel**: Subtle, breathing indicator dot (`#FF4500` / `#FF5522`) with specular reflection and photon halo.
-  - **7-Needle Gaussian Harmonic Waveform**: Mathematical acoustic distribution $[0.18, 0.38, 0.68, 0.94, 0.68, 0.38, 0.18]$ responding dynamically to microphone RMS volume.
-  - **Clear State Machine**: Smooth transitions between **Listening** (breathing coral jewel + live Gaussian needles), **Processing** (ambient traveling wave shimmer), and **Done** (emerald checkmark with gentle auto-fade).
+- **Floating Pill HUD (Jony Ive & Dieter Rams White Ceramic Aesthetic)**:
+  - **Ultra-Compact 120×36 px Capsule**: Significantly reduced width; floats featherlight and non-intrusively at the bottom-center of your screen.
+  - **Pristine White Ceramic Glass**: Apple & Braun-inspired white frosted acrylic glass (`rgba(255, 255, 255, 0.96)`) with subtle hairline rim and soft studio ambient shadow.
+  - **Subtle Luxury Aqua Status Jewel**: Jewelry-grade seafoam cyan/aqua dot (`#00C7B1`) with delicate breathing photon halo (no harsh traffic lights).
+  - **7-Needle Gaussian Harmonic Waveform**: Mathematical acoustic envelope $[0.20, 0.45, 0.78, 1.00, 0.78, 0.45, 0.20]$ rendered in slate titanium needles reacting to live microphone RMS volume.
+  - **Non-Interfering Overlay**: Built with Win32 layered windows (`WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`). Never steals keyboard focus from your active editor, and mouse clicks pass right through.
+  - **Clear State Machine**: Smooth transitions between **Listening** (breathing aqua jewel + live Gaussian needles), **Processing** (subtle graphite wave shimmer), and **Done** (emerald-mint checkmark with gentle auto-fade).
 - **Dual Hotkey Modes**:
   - **Push-to-Talk**: Hold `Win + Alt` (or `Alt + E`) while speaking and release to insert.
   - **Tap-to-Toggle**: Quickly tap `Win + Alt` (or `Alt + E`) to start listening, and tap again when finished.
