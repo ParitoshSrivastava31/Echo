@@ -52,7 +52,8 @@ jobs:
           )
           foreach ($file in $files) {
             Write-Host "Fetching $file..."
-            Invoke-WebRequest -Uri "$hfBase/$file" -OutFile "models\asr4all-s\$file"
+            $source = if ($file -eq "LICENSE") { "$hfBase/$file" } else { "$hfBase/onnx/$file" }
+            Invoke-WebRequest -Uri $source -OutFile "models\asr4all-s\$file"
           }
 
       - name: Generate Icon Asset
@@ -72,7 +73,7 @@ jobs:
       - name: Create Portable Zip Package
         shell: pwsh
         run: |
-          $tag = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF -replace "refs/tags/", "" } else { "v0.2.1" }
+          $tag = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF -replace "refs/tags/", "" } else { "v0.2.2" }
           $zipName = "dist\Echo-$tag-windows-x64.zip"
           Compress-Archive -Path target\release\echo.exe, models\onnxruntime.dll, echo.ico, models -DestinationPath $zipName -Force
 

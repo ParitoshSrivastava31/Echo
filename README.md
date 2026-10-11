@@ -1,7 +1,7 @@
 # Echo: Lightweight, Offline English Voice Keyboard for Windows
 
-[![Release](https://img.shields.io/badge/Release-v0.2.1-00C7B1?style=flat&logo=windows)](https://github.com/ParitoshSrivastava31/Echo/releases/tag/v0.2.1)
-[![Direct Download](https://img.shields.io/badge/Download-Installer%20(.exe)-blue?logo=windows&color=0078D4)](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-Setup-v0.2.1.exe)
+[![Release](https://img.shields.io/badge/Release-v0.2.2-00C7B1?style=flat&logo=windows)](https://github.com/ParitoshSrivastava31/Echo/releases/tag/v0.2.2)
+[![Direct Download](https://img.shields.io/badge/Download-Installer%20(.exe)-blue?logo=windows&color=0078D4)](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.2/Echo-Setup-v0.2.2.exe)
 [![Windows Release](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml/badge.svg)](https://github.com/ParitoshSrivastava31/Echo/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Windows 11 / 10](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-0078D4.svg)](https://github.com/ParitoshSrivastava31/Echo)
@@ -12,12 +12,12 @@ Built in pure native Rust with ONNX Runtime, Echo delivers the voice dictation e
 
 ---
 
-## ⚡ Instant Download for Windows (v0.2.1)
+## ⚡ Instant Download for Windows (v0.2.2)
 
 | Package | Direct Download Link | Format | Size |
 | :--- | :--- | :--- | :--- |
-| **Windows Installer (Recommended)** | 🚀 **[Echo-Setup-v0.2.1.exe](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-Setup-v0.2.1.exe)** | Single-click self-extracting setup | ~99 MB |
-| **Portable ZIP** | 📦 **[Echo-v0.2.1-windows-x64.zip](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.1/Echo-v0.2.1-windows-x64.zip)** | Standalone portable folder | ~108 MB |
+| **Windows Installer (Recommended)** | 🚀 **[Echo-Setup-v0.2.2.exe](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.2/Echo-Setup-v0.2.2.exe)** | Single-click self-extracting setup | ~99 MB |
+| **Portable ZIP** | 📦 **[Echo-v0.2.2-windows-x64.zip](https://github.com/ParitoshSrivastava31/Echo/releases/download/v0.2.2/Echo-v0.2.2-windows-x64.zip)** | Standalone portable folder | ~108 MB |
 
 *All speech models and runtime DLLs are fully bundled. Zero cloud setup or internet connection required.*
 
@@ -75,14 +75,14 @@ Previously measured on one 11-second JFK reference clip using the development ta
 
 Download the latest installer from the [Releases](https://github.com/ParitoshSrivastava31/Echo/releases) page:
 
-1. Download **`Echo-Setup-v0.2.1.exe`** (approx. 99 MB, self-contained with model weights and ONNX runtime).
+1. Download **`Echo-Setup-v0.2.2.exe`** (approx. 99 MB, self-contained with model weights and ONNX runtime).
 2. Double-click to install. It installs to your user profile (`%LOCALAPPDATA%\Programs\Echo`) without requiring administrator permissions.
 3. Optionally enable **"Start Echo when Windows starts"** and **"Create Desktop Shortcut"**.
 4. Echo launches immediately and docks silently in your Windows System Tray.
 
 ### Option 2: Portable ZIP
 
-1. Download **`Echo-v0.2.1-windows-x64.zip`**.
+1. Download **`Echo-v0.2.2-windows-x64.zip`**.
 2. Extract to any folder (e.g. `C:\Tools\Echo`).
 3. Run `echo.exe`.
 
@@ -158,7 +158,7 @@ cargo run -- write-ico
 & "ISCC.exe" scripts\installer.iss
 ```
 
-The resulting installer is generated at `dist\Echo-Setup-v0.2.1.exe`.
+The resulting installer is generated at `dist\Echo-Setup-v0.2.2.exe`.
 
 ### Diagnostic Commands
 

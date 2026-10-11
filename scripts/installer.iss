@@ -1,6 +1,6 @@
 ; Inno Setup Script for Echo - Offline Voice Keyboard for Windows
 #define MyAppName "Echo"
-#define MyAppVersion "0.2.1"
+#define MyAppVersion "0.2.2"
 #define MyAppPublisher "Echo Team"
 #define MyAppURL "https://github.com/ParitoshSrivastava31/Echo"
 #define MyAppExeName "echo.exe"
