@@ -10,16 +10,18 @@ use windows_sys::Win32::UI::Shell::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreateIconFromResourceEx, CreatePopupMenu, CreateWindowExW,
     DefWindowProcW, DestroyMenu, DestroyWindow, DispatchMessageW, GetCursorPos,
-    GetMessageW, PostQuitMessage, PostThreadMessageW, RegisterClassW,
-    SetForegroundWindow, TrackPopupMenuEx, TranslateMessage, HICON, HMENU,
+    GetMessageW, GetSystemMetrics, LoadIconW, LoadImageW, PostQuitMessage,
+    PostThreadMessageW, RegisterClassW, SetForegroundWindow, TrackPopupMenuEx,
+    TranslateMessage, HICON, HMENU, IMAGE_ICON, LR_DEFAULTCOLOR,
     MF_CHECKED, MF_GRAYED, MF_POPUP, MF_SEPARATOR, MF_STRING,
-    MF_UNCHECKED, MSG, TPM_BOTTOMALIGN, TPM_LEFTALIGN, TPM_RETURNCMD,
-    WM_DESTROY, WM_LBUTTONUP, WM_QUIT, WM_RBUTTONUP, WM_USER,
-    WNDCLASSW, WS_OVERLAPPED,
+    MF_UNCHECKED, MSG, SM_CXSMICON, SM_CYSMICON, TPM_BOTTOMALIGN,
+    TPM_LEFTALIGN, TPM_RETURNCMD, WM_DESTROY, WM_LBUTTONUP, WM_QUIT,
+    WM_RBUTTONUP, WM_USER, WNDCLASSW, WS_OVERLAPPED,
 };
 
-use super::canvas::{draw_logo, Canvas};
+
 use crate::audio::AudioCapture;
+
 use crate::config::AppConfig;
 
 const WM_TRAY_CALLBACK: u32 = WM_USER + 201;
@@ -154,14 +156,36 @@ impl Drop for TrayManager {
 }
 
 unsafe fn create_app_hicon(live: bool) -> HICON {
-    let size = 32usize;
-    let mut canvas = Canvas::new(size, size);
-    draw_logo(&mut canvas, live);
-    let bgra = canvas.to_straight_bgra();
+    let cx = GetSystemMetrics(SM_CXSMICON);
+    let cy = GetSystemMetrics(SM_CYSMICON);
 
+    // 1. If not live status, load the embedded high-resolution PE icon (Resource ID 1 from echo.rc)
+    if !live {
+        let hinstance = windows_sys::Win32::System::LibraryLoader::GetModuleHandleW(std::ptr::null());
+        let hicon = LoadImageW(
+            hinstance,
+            1 as *const u16,
+            IMAGE_ICON,
+            cx,
+            cy,
+            LR_DEFAULTCOLOR,
+        );
+        if !hicon.is_null() {
+            return hicon;
+        }
+
+        let hicon = LoadIconW(hinstance, 1 as *const u16);
+        if !hicon.is_null() {
+            return hicon;
+        }
+    }
+
+    // 2. Synthesize dynamically with valid Windows RT_ICON resource format (BITMAPINFOHEADER + bottom-up BGRA + mask)
+    let size = if cx > 0 { cx as usize } else { 32usize };
+    let icon_res = super::canvas::build_icon_resource(size, live);
     CreateIconFromResourceEx(
-        bgra.as_ptr(),
-        bgra.len() as u32,
+        icon_res.as_ptr(),
+        icon_res.len() as u32,
         1, // TRUE = icon
         0x00030000,
         size as i32,
@@ -169,6 +193,7 @@ unsafe fn create_app_hicon(live: bool) -> HICON {
         0,
     )
 }
+
 
 unsafe fn init_tray_icon(hwnd: HWND, hicon: HICON) {
     let mut nid: NOTIFYICONDATAW = std::mem::zeroed();
@@ -235,11 +260,13 @@ unsafe fn show_tray_menu(hwnd: HWND) {
 
     let combos = [
         ("Win + Alt (Recommended)", "winalt", 2001),
+        ("Alt + E", "alte", 2006),
         ("Alt + Space", "altspace", 2002),
         ("Ctrl + Space", "ctrlspace", 2003),
         ("Win + Space", "winspace", 2004),
         ("Ctrl + Alt", "ctrlalt", 2005),
     ];
+
 
     for (label, key, id) in combos {
         let flag = if current_combo == key { MF_CHECKED } else { MF_UNCHECKED };
@@ -308,6 +335,7 @@ unsafe fn handle_menu_cmd(cmd: usize, devices: &[String]) {
 
     match cmd {
         2001 => { let _ = tx.send(TrayCommand::ChangeHotkey("Win+Alt".into())); }
+        2006 => { let _ = tx.send(TrayCommand::ChangeHotkey("Alt+E".into())); }
         2002 => { let _ = tx.send(TrayCommand::ChangeHotkey("Alt+Space".into())); }
         2003 => { let _ = tx.send(TrayCommand::ChangeHotkey("Ctrl+Space".into())); }
         2004 => { let _ = tx.send(TrayCommand::ChangeHotkey("Win+Space".into())); }
@@ -401,3 +429,19 @@ fn wide_str(s: &str) -> Vec<u16> {
     use std::os::windows::ffi::OsStrExt;
     std::ffi::OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_app_hicon_not_null() {
+        unsafe {
+            let hicon = create_app_hicon(false);
+            assert!(!hicon.is_null(), "HICON must not be null");
+            let hicon_live = create_app_hicon(true);
+            assert!(!hicon_live.is_null(), "Live HICON must not be null");
+        }
+    }
+}
+

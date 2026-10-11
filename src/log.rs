@@ -26,7 +26,9 @@ pub fn info(msg: &str) {
     let ts = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     if let Some(f) = LOG.lock().unwrap().as_mut() {
         let _ = writeln!(f, "{ts} {msg}");
+        let _ = f.flush();
     }
+
     if cfg!(debug_assertions) {
         eprintln!("[echo] {msg}");
     }

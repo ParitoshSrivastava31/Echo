@@ -25,6 +25,7 @@ pub enum HotkeyAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TwoKeyCombo {
     WinAlt,
+    AltE,
     AltSpace,
     CtrlSpace,
     WinSpace,
@@ -35,6 +36,7 @@ impl TwoKeyCombo {
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().replace([' ', '+'], "").as_str() {
             "winalt" => TwoKeyCombo::WinAlt,
+            "alte" => TwoKeyCombo::AltE,
             "altspace" => TwoKeyCombo::AltSpace,
             "ctrlspace" => TwoKeyCombo::CtrlSpace,
             "winspace" => TwoKeyCombo::WinSpace,
@@ -46,6 +48,7 @@ impl TwoKeyCombo {
     pub fn to_display_str(&self) -> &'static str {
         match self {
             TwoKeyCombo::WinAlt => "Win + Alt",
+            TwoKeyCombo::AltE => "Alt + E",
             TwoKeyCombo::AltSpace => "Alt + Space",
             TwoKeyCombo::CtrlSpace => "Ctrl + Space",
             TwoKeyCombo::WinSpace => "Win + Space",
@@ -56,7 +59,7 @@ impl TwoKeyCombo {
     pub fn matches_key1(&self, vk: u32) -> bool {
         match self {
             TwoKeyCombo::WinAlt | TwoKeyCombo::WinSpace => vk == VK_LWIN as u32 || vk == VK_RWIN as u32,
-            TwoKeyCombo::AltSpace => vk == VK_LMENU as u32 || vk == VK_RMENU as u32 || vk == VK_MENU as u32,
+            TwoKeyCombo::AltSpace | TwoKeyCombo::AltE => vk == VK_LMENU as u32 || vk == VK_RMENU as u32 || vk == VK_MENU as u32,
             TwoKeyCombo::CtrlSpace | TwoKeyCombo::CtrlAlt => vk == VK_LCONTROL as u32 || vk == VK_RCONTROL as u32 || vk == VK_CONTROL as u32,
         }
     }
@@ -64,10 +67,12 @@ impl TwoKeyCombo {
     pub fn matches_key2(&self, vk: u32) -> bool {
         match self {
             TwoKeyCombo::WinAlt | TwoKeyCombo::CtrlAlt => vk == VK_LMENU as u32 || vk == VK_RMENU as u32 || vk == VK_MENU as u32,
+            TwoKeyCombo::AltE => vk == 0x45 || vk == b'E' as u32 || vk == b'e' as u32,
             TwoKeyCombo::AltSpace | TwoKeyCombo::CtrlSpace | TwoKeyCombo::WinSpace => vk == VK_SPACE as u32,
         }
     }
 }
+
 
 struct HookState {
     combo: TwoKeyCombo,

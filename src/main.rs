@@ -47,8 +47,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    run_app()
+    if let Err(e) = run_app() {
+        echo::log::info(&format!("Fatal error in run_app: {e}"));
+        eprintln!("Fatal error: {e}");
+        return Err(e);
+    }
+    Ok(())
 }
+
+
 
 fn run_benchmark_command() -> Result<(), Box<dyn std::error::Error>> {
     println!("============================================================");
@@ -120,8 +127,11 @@ fn run_app() -> Result<(), Box<dyn std::error::Error>> {
         let mutex_name = wide_str("Global\\EchoVoiceKeyboardSingletonMutex");
         let _mutex = CreateMutexW(std::ptr::null_mut(), 1, mutex_name.as_ptr());
         if GetLastError() == 183 { // ERROR_ALREADY_EXISTS
+            echo::log::init();
+            echo::log::info("Existing instance detected via singleton mutex. Exiting.");
             return Ok(());
         }
+
 
         // Set Per-Monitor V2 DPI awareness
         windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext(

@@ -453,27 +453,33 @@ pub fn draw_logo(c: &mut Canvas, live: bool) {
     );
 }
 
+/// Builds a single RT_ICON resource payload for a given pixel dimension.
+pub fn build_icon_resource(s: usize, live: bool) -> Vec<u8> {
+    let mut c = Canvas::new(s, s);
+    draw_logo(&mut c, live);
+    let bgra = c.to_straight_bgra();
+    let mask_row = s.div_ceil(32) * 4;
+    let mut img = Vec::with_capacity(40 + s * s * 4 + mask_row * s);
+    // BITMAPINFOHEADER (height doubled for the AND mask as per Windows icon specs)
+    img.extend_from_slice(&40u32.to_le_bytes());
+    img.extend_from_slice(&(s as i32).to_le_bytes());
+    img.extend_from_slice(&((s * 2) as i32).to_le_bytes());
+    img.extend_from_slice(&1u16.to_le_bytes());
+    img.extend_from_slice(&32u16.to_le_bytes());
+    img.extend_from_slice(&[0u8; 24]);
+    for y in (0..s).rev() {
+        img.extend_from_slice(&bgra[y * s * 4..(y + 1) * s * 4]);
+    }
+    img.extend(std::iter::repeat_n(0u8, mask_row * s));
+    img
+}
+
 /// Builds a multi-resolution .ico file containing the redesigned icon.
 pub fn build_ico() -> Vec<u8> {
     let sizes = [16usize, 20, 24, 32, 40, 48, 64, 128, 256];
     let mut images = Vec::new();
     for &s in &sizes {
-        let mut c = Canvas::new(s, s);
-        draw_logo(&mut c, false);
-        let bgra = c.to_straight_bgra();
-        let mut img = Vec::new();
-        // BITMAPINFOHEADER (height doubled for the AND mask)
-        img.extend_from_slice(&40u32.to_le_bytes());
-        img.extend_from_slice(&(s as i32).to_le_bytes());
-        img.extend_from_slice(&((s * 2) as i32).to_le_bytes());
-        img.extend_from_slice(&1u16.to_le_bytes());
-        img.extend_from_slice(&32u16.to_le_bytes());
-        img.extend_from_slice(&[0u8; 24]);
-        for y in (0..s).rev() {
-            img.extend_from_slice(&bgra[y * s * 4..(y + 1) * s * 4]);
-        }
-        let mask_row = s.div_ceil(32) * 4;
-        img.extend(std::iter::repeat_n(0u8, mask_row * s));
+        let img = build_icon_resource(s, false);
         images.push((s, img));
     }
     let mut out = Vec::new();
@@ -494,3 +500,4 @@ pub fn build_ico() -> Vec<u8> {
     }
     out
 }
+
